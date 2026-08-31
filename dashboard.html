@@ -1,151 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>Location Dashboard</title>
 
 <style>
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#f3f4f6;
+
+*{
+    box-sizing:border-box;
 }
 
-header{
-    background:#111827;
-    color:white;
-    padding:18px;
-    text-align:center;
+body{
+
+    margin:0;
+
+    font-family:Arial,sans-serif;
+
+    background:#f2f4f7;
+
+    padding:20px;
 }
 
 .container{
-    max-width:1100px;
-    margin:20px auto;
-    padding:15px;
+
+    max-width:900px;
+
+    margin:auto;
 }
 
-.card{
+.header{
+
     background:white;
-    border-radius:15px;
+
     padding:20px;
+
+    border-radius:16px;
+
+    box-shadow:
+    0 4px 15px rgba(0,0,0,.1);
+
     margin-bottom:20px;
-    box-shadow:0 3px 15px rgba(0,0,0,.1);
+}
+
+h1{
+
+    margin:0 0 10px;
 }
 
 button{
-    padding:12px 18px;
+
+    padding:13px 20px;
+
     border:0;
+
     border-radius:10px;
-    cursor:pointer;
-    font-size:15px;
-}
 
-.refresh{
     background:#2563eb;
+
     color:white;
-}
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:15px;
-}
+    font-size:16px;
 
-th,td{
-    padding:12px;
-    border-bottom:1px solid #ddd;
-    text-align:left;
-}
-
-th{
-    background:#f3f4f6;
-}
-
-.maplink{
-    text-decoration:none;
+    cursor:pointer;
 }
 
 .status{
-    margin-top:10px;
+
+    margin-top:15px;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    background:#f3f4f6;
+}
+
+.location-card{
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:16px;
+
+    box-shadow:
+    0 4px 15px rgba(0,0,0,.1);
+
+    margin-bottom:20px;
+}
+
+.location-title{
+
+    font-size:20px;
+
     font-weight:bold;
+
+    margin-bottom:15px;
 }
 
-@media(max-width:700px){
+.info{
 
-    table{
-        font-size:13px;
-    }
-
-    th,td{
-        padding:8px;
-    }
+    line-height:1.8;
 }
+
+.map{
+
+    display:inline-block;
+
+    margin-top:15px;
+
+    padding:12px 18px;
+
+    background:#16a34a;
+
+    color:white;
+
+    text-decoration:none;
+
+    border-radius:10px;
+}
+
+.empty{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:16px;
+
+    text-align:center;
+}
+
+.time{
+
+    color:#666;
+
+    font-size:14px;
+}
+
 </style>
 
 </head>
 
 <body>
 
-<header>
-    <h2>📍 Location Dashboard</h2>
-</header>
-
 <div class="container">
 
-    <div class="card">
+<div class="header">
 
-        <button
-            class="refresh"
-            onclick="loadLocations()">
-            🔄 Refresh Location
-        </button>
+<h1>📍 Location Dashboard</h1>
 
-        <div
-            id="status"
-            class="status">
-            Loading...
-        </div>
+<p>
+Latest shared location
+</p>
 
-    </div>
+<button onclick="loadLocation()">
+🔄 Refresh Location
+</button>
+
+<div
+id="status"
+class="status">
+Location loading...
+</div>
+
+</div>
 
 
-    <div class="card">
+<div id="locationArea">
 
-        <h3>Latest Shared Locations</h3>
-
-        <table>
-
-            <thead>
-
-                <tr>
-                    <th>Device</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
-                    <th>Accuracy</th>
-                    <th>Time</th>
-                    <th>Map</th>
-                </tr>
-
-            </thead>
-
-            <tbody id="locationTable">
-
-            </tbody>
-
-        </table>
-
-    </div>
+</div>
 
 </div>
 
 
 <script>
 
-/* =========================================
+/* ================================
    SUPABASE
-========================================= */
+================================ */
 
 const SUPABASE_URL =
 "https://qtfnupdojsqpuywhoryu.supabase.co";
@@ -154,197 +193,184 @@ const SUPABASE_KEY =
 "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* =========================================
-   LOAD LOCATIONS
-========================================= */
+/* ================================
+   LOAD LATEST LOCATIONS
+================================ */
 
-async function loadLocations(){
+async function loadLocation(){
 
     const status =
-        document.getElementById("status");
+    document.getElementById("status");
 
-    const table =
-        document.getElementById("locationTable");
+    const area =
+    document.getElementById("locationArea");
+
 
     status.innerHTML =
-        "⏳ Loading locations...";
+    "⏳ Latest location loading...";
 
 
     try{
 
         const response =
-            await fetch(
+        await fetch(
 
-                SUPABASE_URL +
-                "/rest/v1/locations" +
-                "?select=*" +
-                "&order=created_at.desc" +
-                "&limit=50",
+            SUPABASE_URL +
+            "/rest/v1/locations" +
+            "?select=*" +
+            "&order=created_at.desc",
 
-                {
+            {
 
-                    method:"GET",
+                method:"GET",
 
-                    headers:{
+                headers:{
 
-                        "apikey":
-                            SUPABASE_KEY,
+                    "apikey":
+                    SUPABASE_KEY,
 
-                        "Authorization":
-                            "Bearer " +
-                            SUPABASE_KEY
-                    }
+                    "Authorization":
+                    "Bearer " +
+                    SUPABASE_KEY
                 }
-            );
+            }
+        );
 
 
         if(!response.ok){
 
-            const error =
-                await response.text();
+            const text =
+            await response.text();
 
-            console.log(error);
+            console.log(text);
+
+            throw new Error(
+                "Unable to load locations"
+            );
+        }
+
+
+        const data =
+        await response.json();
+
+
+        if(data.length === 0){
 
             status.innerHTML =
-                "❌ Unable to load locations.";
+            "⚪ अभी कोई location नहीं मिली।";
+
+            area.innerHTML =
+            '<div class="empty">' +
+            "अभी कोई location share नहीं की गई है।" +
+            "</div>";
 
             return;
         }
 
 
-        const locations =
-            await response.json();
+        /*
+          केवल सबसे latest row
+        */
+
+        const location =
+        data[0];
 
 
-        table.innerHTML = "";
+        const map =
+        "https://www.google.com/maps?q=" +
+        location.latitude +
+        "," +
+        location.longitude;
 
 
-        if(locations.length === 0){
-
-            status.innerHTML =
-                "No locations found.";
-
-            return;
-        }
+        const time =
+        new Date(
+            location.created_at
+        ).toLocaleString();
 
 
         status.innerHTML =
-            "🟢 " +
-            locations.length +
-            " location record(s) found.";
+        "🟢 Latest location मिल गई।";
 
 
-        locations.forEach(function(location){
+        area.innerHTML =
 
-            const row =
-                document.createElement("tr");
+        '<div class="location-card">' +
 
+        '<div class="location-title">' +
+        "📍 Latest Location" +
+        "</div>" +
 
-            const mapURL =
-                "https://www.google.com/maps?q=" +
-                location.latitude +
-                "," +
-                location.longitude;
+        '<div class="info">' +
 
+        "<b>Device:</b><br>" +
+        location.device_id +
 
-            const time =
-                location.created_at
-                ?
-                new Date(
-                    location.created_at
-                ).toLocaleString()
-                :
-                "-";
+        "<br><br>" +
 
+        "<b>Latitude:</b> " +
+        location.latitude +
 
-            row.innerHTML =
+        "<br>" +
 
-                "<td>" +
-                escapeHTML(
-                    location.device_id
-                ) +
-                "</td>" +
+        "<b>Longitude:</b> " +
+        location.longitude +
 
-                "<td>" +
-                location.latitude +
-                "</td>" +
+        "<br>" +
 
-                "<td>" +
-                location.longitude +
-                "</td>" +
+        "<b>Accuracy:</b> लगभग " +
+        Math.round(
+            location.accuracy || 0
+        ) +
+        " मीटर" +
 
-                "<td>" +
-                Math.round(
-                    location.accuracy || 0
-                ) +
-                " m</td>" +
+        "<br><br>" +
 
-                "<td>" +
-                time +
-                "</td>" +
+        '<span class="time">' +
+        "🕐 " +
+        time +
+        "</span>" +
 
-                "<td>" +
+        "</div>" +
 
-                '<a class="maplink" ' +
-                'href="' +
-                mapURL +
-                '" target="_blank">' +
+        '<a class="map" ' +
+        'href="' +
+        map +
+        '" ' +
+        'target="_blank">' +
 
-                "📍 Open Map" +
+        "📍 Open Google Maps" +
 
-                "</a>" +
+        "</a>" +
 
-                "</td>";
-
-
-            table.appendChild(row);
-
-        });
-
-
+        "</div>";
     }
+
     catch(error){
 
-        console.log(error);
+        console.error(error);
 
         status.innerHTML =
-            "❌ Network error.";
+        "❌ Unable to load location.";
+
+        area.innerHTML =
+        '<div class="empty">' +
+        "Dashboard location load नहीं कर पाया।" +
+        "<br><br>" +
+        error.message +
+        "</div>";
     }
 }
 
 
-/* =========================================
-   HTML ESCAPE
-========================================= */
+/* ================================
+   AUTO LOAD
+================================ */
 
-function escapeHTML(value){
-
-    return String(value)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-}
-
-
-/* =========================================
-   INITIAL LOAD
-========================================= */
-
-loadLocations();
-
-
-/* =========================================
-   AUTO REFRESH
-========================================= */
-
-setInterval(
-    loadLocations,
-    10000
-);
+loadLocation();
 
 </script>
 
 </body>
+
 </html>
