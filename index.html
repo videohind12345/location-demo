@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Location Share</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f2f4f7;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.card{
+    width:90%;
+    max-width:420px;
+    background:white;
+    padding:25px;
+    border-radius:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
+    text-align:center;
+}
+
+h2{
+    margin-top:0;
+}
+
+button{
+    width:100%;
+    padding:15px;
+    margin-top:12px;
+    border:0;
+    border-radius:12px;
+    font-size:17px;
+    cursor:pointer;
+}
+
+.location{
+    background:#16a34a;
+    color:white;
+}
+
+.camera{
+    background:#2563eb;
+    color:white;
+}
+
+#result{
+    margin-top:20px;
+    padding:15px;
+    background:#f3f4f6;
+    border-radius:12px;
+    text-align:left;
+    word-break:break-word;
+}
+
+video{
+    width:100%;
+    margin-top:15px;
+    border-radius:12px;
+    display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>📍 Location Share</h2>
+
+<p>
+अपनी location share करने के लिए नीचे बटन दबाएँ।
+</p>
+
+<button class="location" onclick="shareLocation()">
+📍 Share My Location
+</button>
+
+<button class="camera" onclick="openCamera()">
+📷 Open Camera
+</button>
+
+<video id="video" autoplay playsinline></video>
+
+<div id="result">
+अभी location share नहीं की गई है।
+</div>
+
+</div>
+
+<script>
+
+function shareLocation(){
+
+    const result =
+        document.getElementById("result");
+
+    if(!navigator.geolocation){
+
+        result.innerHTML =
+        "❌ इस browser में location उपलब्ध नहीं है।";
+
+        return;
+    }
+
+    result.innerHTML =
+        "⏳ Location permission माँगी जा रही है...";
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            const lat =
+                position.coords.latitude;
+
+            const lon =
+                position.coords.longitude;
+
+            const accuracy =
+                Math.round(position.coords.accuracy);
+
+            const map =
+                "https://www.google.com/maps?q="
+                + lat + "," + lon;
+
+            result.innerHTML =
+
+                "✅ Location permission दी गई।<br><br>" +
+
+                "Latitude: " + lat + "<br>" +
+
+                "Longitude: " + lon + "<br>" +
+
+                "Accuracy: लगभग " +
+                accuracy + " मीटर<br><br>" +
+
+                '<a href="' + map +
+                '" target="_blank">' +
+                "📍 Google Maps में देखें" +
+                "</a>";
+        },
+
+        function(error){
+
+            result.innerHTML =
+                "❌ Location नहीं मिली।<br><br>" +
+                error.message;
+        },
+
+        {
+            enableHighAccuracy:true,
+            timeout:15000,
+            maximumAge:0
+        }
+    );
+}
+
+
+async function openCamera(){
+
+    const video =
+        document.getElementById("video");
+
+    const result =
+        document.getElementById("result");
+
+    try{
+
+        const stream =
+            await navigator.mediaDevices
+            .getUserMedia({
+                video:true,
+                audio:false
+            });
+
+        video.srcObject = stream;
+
+        video.style.display =
+            "block";
+
+        result.innerHTML =
+            "✅ Camera permission दी गई।";
+
+    }
+
+    catch(error){
+
+        result.innerHTML =
+            "❌ Camera permission नहीं मिली।<br><br>"
+            + error.message;
+    }
+}
+
+</script>
+
+</body>
+</html>
