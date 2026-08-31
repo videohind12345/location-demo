@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Location Dashboard</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f3f4f6;
+}
+
+header{
+    background:#111827;
+    color:white;
+    padding:18px;
+    text-align:center;
+}
+
+.container{
+    max-width:1100px;
+    margin:20px auto;
+    padding:15px;
+}
+
+.card{
+    background:white;
+    border-radius:15px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 3px 15px rgba(0,0,0,.1);
+}
+
+button{
+    padding:12px 18px;
+    border:0;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:15px;
+}
+
+.refresh{
+    background:#2563eb;
+    color:white;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:15px;
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #ddd;
+    text-align:left;
+}
+
+th{
+    background:#f3f4f6;
+}
+
+.maplink{
+    text-decoration:none;
+}
+
+.status{
+    margin-top:10px;
+    font-weight:bold;
+}
+
+@media(max-width:700px){
+
+    table{
+        font-size:13px;
+    }
+
+    th,td{
+        padding:8px;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <h2>📍 Location Dashboard</h2>
+</header>
+
+<div class="container">
+
+    <div class="card">
+
+        <button
+            class="refresh"
+            onclick="loadLocations()">
+            🔄 Refresh Location
+        </button>
+
+        <div
+            id="status"
+            class="status">
+            Loading...
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>Latest Shared Locations</h3>
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Device</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Accuracy</th>
+                    <th>Time</th>
+                    <th>Map</th>
+                </tr>
+
+            </thead>
+
+            <tbody id="locationTable">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================
+   SUPABASE
+========================================= */
+
+const SUPABASE_URL =
+"https://qtfnupdojsqpuywhoryu.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+
+
+/* =========================================
+   LOAD LOCATIONS
+========================================= */
+
+async function loadLocations(){
+
+    const status =
+        document.getElementById("status");
+
+    const table =
+        document.getElementById("locationTable");
+
+    status.innerHTML =
+        "⏳ Loading locations...";
+
+
+    try{
+
+        const response =
+            await fetch(
+
+                SUPABASE_URL +
+                "/rest/v1/locations" +
+                "?select=*" +
+                "&order=created_at.desc" +
+                "&limit=50",
+
+                {
+
+                    method:"GET",
+
+                    headers:{
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Authorization":
+                            "Bearer " +
+                            SUPABASE_KEY
+                    }
+                }
+            );
+
+
+        if(!response.ok){
+
+            const error =
+                await response.text();
+
+            console.log(error);
+
+            status.innerHTML =
+                "❌ Unable to load locations.";
+
+            return;
+        }
+
+
+        const locations =
+            await response.json();
+
+
+        table.innerHTML = "";
+
+
+        if(locations.length === 0){
+
+            status.innerHTML =
+                "No locations found.";
+
+            return;
+        }
+
+
+        status.innerHTML =
+            "🟢 " +
+            locations.length +
+            " location record(s) found.";
+
+
+        locations.forEach(function(location){
+
+            const row =
+                document.createElement("tr");
+
+
+            const mapURL =
+                "https://www.google.com/maps?q=" +
+                location.latitude +
+                "," +
+                location.longitude;
+
+
+            const time =
+                location.created_at
+                ?
+                new Date(
+                    location.created_at
+                ).toLocaleString()
+                :
+                "-";
+
+
+            row.innerHTML =
+
+                "<td>" +
+                escapeHTML(
+                    location.device_id
+                ) +
+                "</td>" +
+
+                "<td>" +
+                location.latitude +
+                "</td>" +
+
+                "<td>" +
+                location.longitude +
+                "</td>" +
+
+                "<td>" +
+                Math.round(
+                    location.accuracy || 0
+                ) +
+                " m</td>" +
+
+                "<td>" +
+                time +
+                "</td>" +
+
+                "<td>" +
+
+                '<a class="maplink" ' +
+                'href="' +
+                mapURL +
+                '" target="_blank">' +
+
+                "📍 Open Map" +
+
+                "</a>" +
+
+                "</td>";
+
+
+            table.appendChild(row);
+
+        });
+
+
+    }
+    catch(error){
+
+        console.log(error);
+
+        status.innerHTML =
+            "❌ Network error.";
+    }
+}
+
+
+/* =========================================
+   HTML ESCAPE
+========================================= */
+
+function escapeHTML(value){
+
+    return String(value)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+
+/* =========================================
+   INITIAL LOAD
+========================================= */
+
+loadLocations();
+
+
+/* =========================================
+   AUTO REFRESH
+========================================= */
+
+setInterval(
+    loadLocations,
+    10000
+);
+
+</script>
+
+</body>
+</html>
