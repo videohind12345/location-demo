@@ -1,204 +1,533 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Location Share</title>
+<title>Live Location Share</title>
 
 <style>
+
+*{
+box-sizing:border-box;
+}
+
 body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#f2f4f7;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
+margin:0;
+font-family:Arial,sans-serif;
+background:#f2f4f7;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
 .card{
-    width:90%;
-    max-width:420px;
-    background:white;
-    padding:25px;
-    border-radius:20px;
-    box-shadow:0 5px 20px rgba(0,0,0,.15);
-    text-align:center;
+width:92%;
+max-width:430px;
+background:#fff;
+padding:25px;
+border-radius:20px;
+box-shadow:0 5px 25px rgba(0,0,0,.15);
+text-align:center;
 }
 
 h2{
-    margin-top:0;
+margin:0 0 10px;
+}
+
+p{
+color:#555;
+line-height:1.5;
 }
 
 button{
-    width:100%;
-    padding:15px;
-    margin-top:12px;
-    border:0;
-    border-radius:12px;
-    font-size:17px;
-    cursor:pointer;
+width:100%;
+padding:15px;
+margin-top:12px;
+border:0;
+border-radius:12px;
+font-size:17px;
+cursor:pointer;
 }
 
 .location{
-    background:#16a34a;
-    color:white;
+background:#16a34a;
+color:#fff;
 }
 
-.camera{
-    background:#2563eb;
-    color:white;
+.stop{
+background:#dc2626;
+color:#fff;
 }
 
 #result{
-    margin-top:20px;
-    padding:15px;
-    background:#f3f4f6;
-    border-radius:12px;
-    text-align:left;
-    word-break:break-word;
+margin-top:20px;
+padding:15px;
+background:#f3f4f6;
+border-radius:12px;
+text-align:left;
+line-height:1.6;
+word-break:break-word;
 }
 
-video{
-    width:100%;
-    margin-top:15px;
-    border-radius:12px;
-    display:none;
+.counter{
+margin-top:15px;
+font-size:20px;
+font-weight:bold;
 }
+
 </style>
+
 </head>
 
 <body>
 
 <div class="card">
 
-<h2>📍 Location Share</h2>
+<h2>📍 Live Location Share</h2>
 
 <p>
 अपनी location share करने के लिए नीचे बटन दबाएँ।
 </p>
 
-<button class="location" onclick="shareLocation()">
+<button
+class="location"
+onclick="startLocation()">
+
 📍 Share My Location
+
 </button>
 
-<button class="camera" onclick="openCamera()">
-📷 Open Camera
+<button
+class="stop"
+onclick="stopLocation()">
+
+⛔ Stop Sharing
+
 </button>
 
-<video id="video" autoplay playsinline></video>
+<div class="counter" id="counter">
+0 / 50
+</div>
 
 <div id="result">
-अभी location share नहीं की गई है।
+
+Location sharing अभी बंद है।
+
 </div>
 
 </div>
+
 
 <script>
 
-function shareLocation(){
+/* =================================================
+SUPABASE SETTINGS
+================================================= */
 
-    const result =
-        document.getElementById("result");
+const SUPABASE_URL =
+"https://qtfnupdojsqpuywhoryu.supabase.co";
 
-    if(!navigator.geolocation){
+const SUPABASE_KEY =
+"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
-        result.innerHTML =
-        "❌ इस browser में location उपलब्ध नहीं है।";
 
-        return;
-    }
+/* =================================================
+DEVICE ID
+================================================= */
 
-    result.innerHTML =
-        "⏳ Location permission माँगी जा रही है...";
+let deviceId =
+localStorage.getItem("location_device_id");
 
-    navigator.geolocation.getCurrentPosition(
+if(!deviceId){
 
-        function(position){
+deviceId =
+crypto.randomUUID();
 
-            const lat =
-                position.coords.latitude;
+localStorage.setItem(
+"location_device_id",
+deviceId
+);
 
-            const lon =
-                position.coords.longitude;
-
-            const accuracy =
-                Math.round(position.coords.accuracy);
-
-            const map =
-                "https://www.google.com/maps?q="
-                + lat + "," + lon;
-
-            result.innerHTML =
-
-                "✅ Location permission दी गई।<br><br>" +
-
-                "Latitude: " + lat + "<br>" +
-
-                "Longitude: " + lon + "<br>" +
-
-                "Accuracy: लगभग " +
-                accuracy + " मीटर<br><br>" +
-
-                '<a href="' + map +
-                '" target="_blank">' +
-                "📍 Google Maps में देखें" +
-                "</a>";
-        },
-
-        function(error){
-
-            result.innerHTML =
-                "❌ Location नहीं मिली।<br><br>" +
-                error.message;
-        },
-
-        {
-            enableHighAccuracy:true,
-            timeout:15000,
-            maximumAge:0
-        }
-    );
 }
 
 
-async function openCamera(){
+/* =================================================
+LOCATION VARIABLES
+================================================= */
 
-    const video =
-        document.getElementById("video");
+let watchId = null;
 
-    const result =
-        document.getElementById("result");
+let locationCount = 0;
 
-    try{
+const MAX_LOCATIONS = 50;
 
-        const stream =
-            await navigator.mediaDevices
-            .getUserMedia({
-                video:true,
-                audio:false
-            });
+let isSharing = false;
 
-        video.srcObject = stream;
 
-        video.style.display =
-            "block";
+/* =================================================
+START LOCATION
+================================================= */
 
-        result.innerHTML =
-            "✅ Camera permission दी गई।";
+function startLocation(){
 
-    }
+const result =
+document.getElementById("result");
 
-    catch(error){
+if(!navigator.geolocation){
 
-        result.innerHTML =
-            "❌ Camera permission नहीं मिली।<br><br>"
-            + error.message;
-    }
+result.innerHTML =
+"❌ इस browser में Location उपलब्ध नहीं है।";
+
+return;
+
 }
+
+
+/* पहले से चल रहा हो तो दोबारा start न करें */
+
+if(isSharing){
+
+result.innerHTML =
+"🟢 Location sharing पहले से चालू है।";
+
+return;
+
+}
+
+
+/* Counter reset */
+
+locationCount = 0;
+
+document.getElementById("counter").innerText =
+"0 / 50";
+
+isSharing = true;
+
+result.innerHTML =
+"⏳ Location permission माँगी जा रही है...";
+
+
+/* =================================================
+WATCH POSITION
+================================================= */
+
+watchId =
+navigator.geolocation.watchPosition(
+
+async function(position){
+
+/*
+अगर 50 locations पूरी हो चुकी हैं
+तो आगे कुछ नहीं करना
+*/
+
+if(!isSharing){
+
+return;
+
+}
+
+if(locationCount >= MAX_LOCATIONS){
+
+stopLocation();
+
+return;
+
+}
+
+
+/* GPS DATA */
+
+const latitude =
+position.coords.latitude;
+
+const longitude =
+position.coords.longitude;
+
+const accuracy =
+position.coords.accuracy;
+
+
+/*
+पहले server पर successfully भेजें।
+सफल होने पर ही counter बढ़ाएँ।
+*/
+
+const success =
+await sendLocation(
+latitude,
+longitude,
+accuracy
+);
+
+
+if(success){
+
+locationCount++;
+
+
+/* Counter update */
+
+document.getElementById("counter").innerText =
+locationCount + " / 50";
+
+
+/* Screen update */
+
+result.innerHTML =
+
+"🟢 Location sharing चालू है।<br><br>" +
+
+"Latitude: " +
+latitude +
+
+"<br>" +
+
+"Longitude: " +
+longitude +
+
+"<br>" +
+
+"Accuracy: लगभग " +
+Math.round(accuracy) +
+" मीटर<br><br>" +
+
+"📡 Location server पर भेजी गई।<br>" +
+
+"📍 Update: " +
+locationCount +
+" / 50";
+
+
+/*
+50 successful updates पूरे होने पर
+automatically stop
+*/
+
+if(locationCount >= MAX_LOCATIONS){
+
+navigator.geolocation.clearWatch(
+watchId
+);
+
+watchId = null;
+
+isSharing = false;
+
+result.innerHTML +=
+
+"<br><br>✅ 50 location updates पूरे हो गए।" +
+"<br>🔴 Location sharing अपने-आप बंद कर दी गई।";
+
+}
+
+}
+
+},
+
+function(error){
+
+let message =
+"Location नहीं मिली।";
+
+if(error.code === 1){
+
+message =
+"Location permission deny कर दी गई।";
+
+}
+
+else if(error.code === 2){
+
+message =
+"Location उपलब्ध नहीं है।";
+
+}
+
+else if(error.code === 3){
+
+message =
+"Location प्राप्त करने में timeout हुआ।";
+
+}
+
+result.innerHTML =
+"❌ " + message;
+
+isSharing = false;
+
+},
+
+{
+
+enableHighAccuracy:true,
+
+timeout:15000,
+
+maximumAge:5000
+
+}
+
+);
+
+}
+
+
+/* =================================================
+SEND LOCATION TO SUPABASE
+================================================= */
+
+async function sendLocation(
+latitude,
+longitude,
+accuracy
+){
+
+try{
+
+const response =
+await fetch(
+
+SUPABASE_URL +
+"/rest/v1/locations",
+
+{
+
+method:"POST",
+
+headers:{
+
+"apikey":
+SUPABASE_KEY,
+
+"Authorization":
+"Bearer " +
+SUPABASE_KEY,
+
+"Content-Type":
+"application/json",
+
+"Prefer":
+"return=minimal"
+
+},
+
+body:JSON.stringify({
+
+device_id:
+deviceId,
+
+latitude:
+latitude,
+
+longitude:
+longitude,
+
+accuracy:
+accuracy
+
+})
+
+}
+
+);
+
+
+/* Server response check */
+
+if(!response.ok){
+
+const errorText =
+await response.text();
+
+console.log(
+"Supabase Error:",
+errorText
+);
+
+document.getElementById("result")
+.innerHTML +=
+
+"<br><br>⚠️ Server पर location भेजने में समस्या।";
+
+return false;
+
+}
+
+
+/* Successfully sent */
+
+return true;
+
+}
+
+catch(error){
+
+console.log(
+"Network Error:",
+error
+);
+
+document.getElementById("result")
+.innerHTML +=
+
+"<br><br>⚠️ Internet connection की समस्या।";
+
+return false;
+
+}
+
+}
+
+
+/* =================================================
+STOP LOCATION
+================================================= */
+
+function stopLocation(){
+
+if(
+watchId !== null
+){
+
+navigator.geolocation.clearWatch(
+watchId
+);
+
+watchId = null;
+
+}
+
+isSharing = false;
+
+document.getElementById("result")
+.innerHTML =
+
+"🔴 Location sharing बंद कर दी गई।" +
+
+"<br><br>" +
+
+"📍 कुल सफल updates: " +
+
+locationCount +
+
+" / 50";
+
+}
+
+
+/* =================================================
+END
+================================================= */
 
 </script>
 
 </body>
+
 </html>
+```
