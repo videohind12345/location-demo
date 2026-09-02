@@ -13,8 +13,14 @@
 box-sizing:border-box;
 }
 
-body{
+html,body{
 margin:0;
+padding:0;
+width:100%;
+min-height:100%;
+}
+
+body{
 font-family:Arial,sans-serif;
 background:#f2f4f7;
 min-height:100vh;
@@ -26,7 +32,7 @@ justify-content:center;
 .card{
 width:92%;
 max-width:430px;
-background:#fff;
+background:#ffffff;
 padding:25px;
 border-radius:20px;
 box-shadow:0 5px 25px rgba(0,0,0,.15);
@@ -51,10 +57,17 @@ border-radius:12px;
 font-size:17px;
 cursor:pointer;
 -webkit-tap-highlight-color:transparent;
+appearance:none;
 }
 
-button:focus{
+button:focus,
+button:active{
 outline:none;
+box-shadow:none;
+}
+
+button::-moz-focus-inner{
+border:0;
 }
 
 button:disabled{
@@ -64,12 +77,12 @@ cursor:not-allowed;
 
 .location{
 background:#16a34a;
-color:#fff;
+color:#ffffff;
 }
 
 .stop{
 background:#dc2626;
-color:#fff;
+color:#ffffff;
 }
 
 #result{
@@ -126,16 +139,26 @@ type="button">
 
 </button>
 
-<div class="counter" id="counter">
+<div
+class="counter"
+id="counter">
+
 0 / 50
+
 </div>
 
-<div class="status" id="status">
+<div
+class="status"
+id="status">
+
 Location sharing अभी बंद है।
+
 </div>
 
 <div id="result">
+
 Location sharing अभी बंद है।
+
 </div>
 
 </div>
@@ -144,7 +167,7 @@ Location sharing अभी बंद है।
 <script>
 
 /* =================================================
-SUPABASE
+SUPABASE SETTINGS
 ================================================= */
 
 const SUPABASE_URL =
@@ -232,13 +255,10 @@ stopLocation
 
 
 /* =================================================
-START
+START LOCATION
 ================================================= */
 
 function startLocation(){
-
-console.log("START BUTTON CLICKED");
-
 
 if(!navigator.geolocation){
 
@@ -250,9 +270,7 @@ return;
 }
 
 
-/*
-HTTPS check
-*/
+/* HTTPS CHECK */
 
 if(
 location.protocol !== "https:" &&
@@ -267,9 +285,7 @@ return;
 }
 
 
-/*
-Already running
-*/
+/* ALREADY RUNNING */
 
 if(isSharing){
 
@@ -281,9 +297,7 @@ return;
 }
 
 
-/*
-Reset
-*/
+/* RESET */
 
 locationCount = 0;
 
@@ -301,16 +315,12 @@ result.innerHTML =
 "⏳ कृपया Location permission में Allow दबाएँ।";
 
 
-/*
-पहली location तुरंत
-*/
+/* FIRST LOCATION */
 
 getLocation();
 
 
-/*
-हर 5 सेकंड
-*/
+/* REPEAT EVERY 5 SECONDS */
 
 locationTimer =
 setInterval(
@@ -438,9 +448,7 @@ return;
 }
 
 
-/*
-SUCCESS
-*/
+/* SUCCESS */
 
 locationCount++;
 
@@ -486,9 +494,7 @@ locationCount +
 MAX_LOCATIONS;
 
 
-/*
-50 complete
-*/
+/* 50 COMPLETE */
 
 if(
 locationCount >= MAX_LOCATIONS
@@ -548,9 +554,7 @@ message =
 }
 
 
-/*
-Permission denied
-*/
+/* PERMISSION DENIED */
 
 if(error.code === 1){
 
@@ -569,9 +573,7 @@ startButton.disabled = false;
 }
 
 
-/*
-Screen
-*/
+/* SCREEN */
 
 status.innerText =
 "⚠️ Location error";
@@ -588,7 +590,7 @@ message +
 
 
 /* =================================================
-SEND TO SUPABASE
+SEND LOCATION TO SUPABASE
 ================================================= */
 
 async function sendLocation(
@@ -701,7 +703,7 @@ return false;
 
 
 /* =================================================
-FINISH 50
+FINISH 50 UPDATES
 ================================================= */
 
 function finishSharing(){
@@ -741,7 +743,7 @@ result.innerHTML +=
 
 
 /* =================================================
-STOP
+STOP SHARING
 ================================================= */
 
 function stopLocation(){
@@ -777,7 +779,9 @@ result.innerHTML =
 
 locationCount +
 
-" / 50";
+" / " +
+
+MAX_LOCATIONS;
 
 }
 
