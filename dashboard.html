@@ -1,181 +1,194 @@
 <!DOCTYPE html>
 <html lang="hi">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
-<title>Location Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latest Shared Location</title>
 
 <style>
+    * {
+        box-sizing: border-box;
+    }
 
-*{
-    box-sizing:border-box;
-}
+    body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #222;
+    }
 
-body{
+    .container {
+        max-width: 650px;
+        margin: auto;
+    }
 
-    margin:0;
+    .card {
+        background: white;
+        border-radius: 18px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.10);
+    }
 
-    font-family:Arial,sans-serif;
+    h1 {
+        margin-top: 0;
+        text-align: center;
+        font-size: 28px;
+    }
 
-    background:#f2f4f7;
+    .status {
+        text-align: center;
+        padding: 12px;
+        border-radius: 10px;
+        background: #e9f8ee;
+        color: #16803a;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
 
-    padding:20px;
-}
+    .location-box {
+        border: 1px solid #ddd;
+        border-radius: 14px;
+        padding: 18px;
+        margin-top: 15px;
+    }
 
-.container{
+    .row {
+        padding: 9px 0;
+        border-bottom: 1px solid #eee;
+        word-break: break-word;
+    }
 
-    max-width:900px;
+    .row:last-child {
+        border-bottom: none;
+    }
 
-    margin:auto;
-}
+    .label {
+        font-weight: bold;
+    }
 
-.header{
+    .value {
+        margin-top: 4px;
+    }
 
-    background:white;
+    button {
+        width: 100%;
+        border: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 17px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-bottom: 12px;
+    }
 
-    padding:20px;
+    #refreshBtn {
+        background: #1976d2;
+        color: white;
+    }
 
-    border-radius:16px;
+    #mapBtn {
+        background: #16803a;
+        color: white;
+        display: none;
+    }
 
-    box-shadow:
-    0 4px 15px rgba(0,0,0,.1);
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 
-    margin-bottom:20px;
-}
+    .error {
+        background: #ffecec;
+        color: #b00020;
+        padding: 14px;
+        border-radius: 10px;
+        margin-top: 15px;
+        display: none;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
 
-h1{
+    .updated {
+        text-align: center;
+        margin-top: 15px;
+        color: #666;
+        font-size: 14px;
+    }
 
-    margin:0 0 10px;
-}
+    .accuracy-good {
+        color: #16803a;
+        font-weight: bold;
+    }
 
-button{
+    .accuracy-medium {
+        color: #d47b00;
+        font-weight: bold;
+    }
 
-    padding:13px 20px;
-
-    border:0;
-
-    border-radius:10px;
-
-    background:#2563eb;
-
-    color:white;
-
-    font-size:16px;
-
-    cursor:pointer;
-}
-
-.status{
-
-    margin-top:15px;
-
-    padding:12px;
-
-    border-radius:10px;
-
-    background:#f3f4f6;
-}
-
-.location-card{
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:16px;
-
-    box-shadow:
-    0 4px 15px rgba(0,0,0,.1);
-
-    margin-bottom:20px;
-}
-
-.location-title{
-
-    font-size:20px;
-
-    font-weight:bold;
-
-    margin-bottom:15px;
-}
-
-.info{
-
-    line-height:1.8;
-}
-
-.map{
-
-    display:inline-block;
-
-    margin-top:15px;
-
-    padding:12px 18px;
-
-    background:#16a34a;
-
-    color:white;
-
-    text-decoration:none;
-
-    border-radius:10px;
-}
-
-.empty{
-
-    background:white;
-
-    padding:25px;
-
-    border-radius:16px;
-
-    text-align:center;
-}
-
-.time{
-
-    color:#666;
-
-    font-size:14px;
-}
-
+    .accuracy-bad {
+        color: #d00000;
+        font-weight: bold;
+    }
 </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-<div class="header">
+    <div class="card">
 
-<h1>📍 Location Dashboard</h1>
+        <h1>📍 Latest Shared Location</h1>
 
-<p>
-Latest shared location
-</p>
+        <div id="status" class="status">
+            🔄 Location check की जा रही है...
+        </div>
 
-<button onclick="loadLocation()">
-🔄 Refresh Location
-</button>
+        <button id="refreshBtn">
+            🔄 Refresh Location
+        </button>
 
-<div
-id="status"
-class="status">
-Location loading...
-</div>
+        <button id="mapBtn">
+            📍 Open Google Maps
+        </button>
 
-</div>
+        <div id="locationBox" class="location-box" style="display:none;">
 
+            <div class="row">
+                <div class="label">📱 Device:</div>
+                <div id="device" class="value"></div>
+            </div>
 
-<div id="locationArea">
+            <div class="row">
+                <div class="label">🌐 Latitude:</div>
+                <div id="latitude" class="value"></div>
+            </div>
 
-</div>
+            <div class="row">
+                <div class="label">🌐 Longitude:</div>
+                <div id="longitude" class="value"></div>
+            </div>
+
+            <div class="row">
+                <div class="label">🎯 Accuracy:</div>
+                <div id="accuracy" class="value"></div>
+            </div>
+
+            <div class="row">
+                <div class="label">🕐 Last Updated:</div>
+                <div id="updated" class="value"></div>
+            </div>
+
+        </div>
+
+        <div id="errorBox" class="error"></div>
+
+        <div class="updated">
+            Auto refresh: हर 5 सेकंड
+        </div>
+
+    </div>
 
 </div>
 
@@ -183,194 +196,312 @@ Location loading...
 <script>
 
 /* ================================
-   SUPABASE
+   SUPABASE SETTINGS
 ================================ */
 
 const SUPABASE_URL =
-"https://qtfnupdojsqpuywhoryu.supabase.co";
+    "https://qtfnupdojsqpuywhoryu.supabase.co";
 
 const SUPABASE_KEY =
-"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+    "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
 /* ================================
-   LOAD LATEST LOCATIONS
+   ELEMENTS
 ================================ */
 
-async function loadLocation(){
+const statusBox = document.getElementById("status");
+const refreshBtn = document.getElementById("refreshBtn");
+const mapBtn = document.getElementById("mapBtn");
 
-    const status =
-    document.getElementById("status");
+const locationBox = document.getElementById("locationBox");
+const errorBox = document.getElementById("errorBox");
 
-    const area =
-    document.getElementById("locationArea");
+const deviceEl = document.getElementById("device");
+const latitudeEl = document.getElementById("latitude");
+const longitudeEl = document.getElementById("longitude");
+const accuracyEl = document.getElementById("accuracy");
+const updatedEl = document.getElementById("updated");
 
 
-    status.innerHTML =
-    "⏳ Latest location loading...";
+/* ================================
+   CURRENT MAP URL
+================================ */
+
+let currentLatitude = null;
+let currentLongitude = null;
 
 
-    try{
+/* ================================
+   LOAD LATEST LOCATION
+================================ */
 
-        const response =
-        await fetch(
+async function loadLatestLocation() {
 
+    refreshBtn.disabled = true;
+
+    statusBox.textContent = "🔄 Latest location पढ़ी जा रही है...";
+    statusBox.style.background = "#fff7df";
+    statusBox.style.color = "#8a6500";
+
+    errorBox.style.display = "none";
+
+    try {
+
+        /*
+          हम latest row लेने के लिए
+          updated_at DESC कर रहे हैं।
+        */
+
+        const url =
             SUPABASE_URL +
             "/rest/v1/locations" +
             "?select=*" +
-            "&order=created_at.desc",
+            "&order=updated_at.desc" +
+            "&limit=1";
 
-            {
+        const response = await fetch(url, {
 
-                method:"GET",
+            method: "GET",
 
-                headers:{
-
-                    "apikey":
-                    SUPABASE_KEY,
-
-                    "Authorization":
-                    "Bearer " +
-                    SUPABASE_KEY
-                }
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
             }
-        );
+
+        });
 
 
-        if(!response.ok){
+        if (!response.ok) {
 
-            const text =
-            await response.text();
-
-            console.log(text);
+            const errorText = await response.text();
 
             throw new Error(
-                "Unable to load locations"
+                "Supabase Error " +
+                response.status +
+                "\n" +
+                errorText
             );
         }
 
 
-        const data =
-        await response.json();
+        const data = await response.json();
 
 
-        if(data.length === 0){
+        if (!data || data.length === 0) {
 
-            status.innerHTML =
-            "⚪ अभी कोई location नहीं मिली।";
+            locationBox.style.display = "none";
+            mapBtn.style.display = "none";
 
-            area.innerHTML =
-            '<div class="empty">' +
-            "अभी कोई location share नहीं की गई है।" +
-            "</div>";
+            statusBox.textContent =
+                "⚠️ अभी कोई location नहीं मिली।";
+
+            statusBox.style.background = "#fff0f0";
+            statusBox.style.color = "#b00020";
+
+            refreshBtn.disabled = false;
 
             return;
         }
 
 
-        /*
-          केवल सबसे latest row
-        */
-
-        const location =
-        data[0];
+        const location = data[0];
 
 
-        const map =
-        "https://www.google.com/maps?q=" +
-        location.latitude +
-        "," +
-        location.longitude;
+        /* ================================
+           SHOW DATA
+        ================================= */
+
+        const latitude =
+            Number(location.latitude);
+
+        const longitude =
+            Number(location.longitude);
+
+        const accuracy =
+            Number(location.accuracy);
 
 
-        const time =
-        new Date(
-            location.created_at
-        ).toLocaleString();
+        currentLatitude = latitude;
+        currentLongitude = longitude;
 
 
-        status.innerHTML =
-        "🟢 Latest location मिल गई।";
+        deviceEl.textContent =
+            location.device_id || "Unknown";
 
 
-        area.innerHTML =
+        latitudeEl.textContent =
+            Number.isFinite(latitude)
+                ? latitude.toFixed(7)
+                : location.latitude;
 
-        '<div class="location-card">' +
 
-        '<div class="location-title">' +
-        "📍 Latest Location" +
-        "</div>" +
+        longitudeEl.textContent =
+            Number.isFinite(longitude)
+                ? longitude.toFixed(7)
+                : location.longitude;
 
-        '<div class="info">' +
 
-        "<b>Device:</b><br>" +
-        location.device_id +
+        if (Number.isFinite(accuracy)) {
 
-        "<br><br>" +
+            const accuracyRounded =
+                Math.round(accuracy);
 
-        "<b>Latitude:</b> " +
-        location.latitude +
+            accuracyEl.textContent =
+                "लगभग " +
+                accuracyRounded +
+                " मीटर";
 
-        "<br>" +
 
-        "<b>Longitude:</b> " +
-        location.longitude +
+            if (accuracyRounded <= 20) {
 
-        "<br>" +
+                accuracyEl.className =
+                    "value accuracy-good";
 
-        "<b>Accuracy:</b> लगभग " +
-        Math.round(
-            location.accuracy || 0
-        ) +
-        " मीटर" +
+            } else if (accuracyRounded <= 100) {
 
-        "<br><br>" +
+                accuracyEl.className =
+                    "value accuracy-medium";
 
-        '<span class="time">' +
-        "🕐 " +
-        time +
-        "</span>" +
+            } else {
 
-        "</div>" +
+                accuracyEl.className =
+                    "value accuracy-bad";
+            }
 
-        '<a class="map" ' +
-        'href="' +
-        map +
-        '" ' +
-        'target="_blank">' +
+        } else {
 
-        "📍 Open Google Maps" +
+            accuracyEl.textContent =
+                location.accuracy || "Unknown";
 
-        "</a>" +
+            accuracyEl.className = "value";
+        }
 
-        "</div>";
-    }
 
-    catch(error){
+        /* ================================
+           UPDATED TIME
+        ================================= */
+
+        let updatedTime =
+            location.updated_at ||
+            location.created_at ||
+            location.timestamp ||
+            location.time;
+
+
+        if (updatedTime) {
+
+            const date =
+                new Date(updatedTime);
+
+            if (!isNaN(date.getTime())) {
+
+                updatedEl.textContent =
+                    date.toLocaleString("en-IN");
+
+            } else {
+
+                updatedEl.textContent =
+                    updatedTime;
+            }
+
+        } else {
+
+            updatedEl.textContent =
+                "Time column नहीं मिली";
+        }
+
+
+        /* ================================
+           SUCCESS
+        ================================= */
+
+        locationBox.style.display = "block";
+
+        mapBtn.style.display = "block";
+
+        statusBox.textContent =
+            "🟢 Latest location मिल गई।";
+
+        statusBox.style.background = "#e9f8ee";
+        statusBox.style.color = "#16803a";
+
+
+    } catch (error) {
 
         console.error(error);
 
-        status.innerHTML =
-        "❌ Unable to load location.";
+        statusBox.textContent =
+            "🔴 Location पढ़ने में समस्या";
 
-        area.innerHTML =
-        '<div class="empty">' +
-        "Dashboard location load नहीं कर पाया।" +
-        "<br><br>" +
-        error.message +
-        "</div>";
+        statusBox.style.background = "#ffecec";
+        statusBox.style.color = "#b00020";
+
+        errorBox.style.display = "block";
+
+        errorBox.textContent =
+            error.message || String(error);
+
     }
+
+
+    refreshBtn.disabled = false;
 }
 
 
 /* ================================
-   AUTO LOAD
+   GOOGLE MAPS
 ================================ */
 
-loadLocation();
+mapBtn.addEventListener("click", function() {
+
+    if (
+        currentLatitude === null ||
+        currentLongitude === null
+    ) {
+        return;
+    }
+
+    const mapsUrl =
+        "https://www.google.com/maps?q=" +
+        encodeURIComponent(currentLatitude) +
+        "," +
+        encodeURIComponent(currentLongitude);
+
+    window.open(
+        mapsUrl,
+        "_blank"
+    );
+});
+
+
+/* ================================
+   MANUAL REFRESH
+================================ */
+
+refreshBtn.addEventListener(
+    "click",
+    loadLatestLocation
+);
+
+
+/* ================================
+   FIRST LOAD
+================================ */
+
+loadLatestLocation();
+
+
+/* ================================
+   AUTO REFRESH
+================================ */
+
+setInterval(
+    loadLatestLocation,
+    5000
+);
 
 </script>
 
 </body>
-
 </html>
