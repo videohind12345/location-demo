@@ -1,620 +1,416 @@
 <!DOCTYPE html>
 <html lang="hi">
-
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
-<title>Location Dashboard</title>
-
-<style>
-
-* {
-    box-sizing: border-box;
-}
-
-body {
-
-    margin: 0;
-
-    padding: 20px;
-
-    font-family: Arial, sans-serif;
-
-    background: #f4f7fb;
-
-    color: #222;
-}
-
-.container {
-
-    max-width: 800px;
-
-    margin: auto;
-}
-
-.card {
-
-    background: white;
-
-    padding: 25px;
-
-    border-radius: 18px;
-
-    box-shadow:
-    0 5px 20px rgba(0,0,0,.10);
-}
-
-h1 {
-
-    text-align: center;
-
-    margin-top: 0;
-}
-
-.status {
-
-    padding: 14px;
-
-    border-radius: 10px;
-
-    text-align: center;
-
-    background: #e9f8ee;
-
-    color: #16803a;
-
-    font-weight: bold;
-
-    margin-bottom: 15px;
-}
-
-button {
-
-    width: 100%;
-
-    padding: 14px;
-
-    border: 0;
-
-    border-radius: 10px;
-
-    background: #1976d2;
-
-    color: white;
-
-    font-size: 17px;
-
-    font-weight: bold;
-
-    cursor: pointer;
-
-    margin-bottom: 15px;
-}
-
-.latest {
-
-    border: 2px solid #ddd;
-
-    border-radius: 15px;
-
-    padding: 18px;
-
-    margin-bottom: 25px;
-}
-
-.history-title {
-
-    font-size: 22px;
-
-    font-weight: bold;
-
-    margin: 20px 0 12px;
-}
-
-.history-item {
-
-    background: white;
-
-    border: 1px solid #ddd;
-
-    border-radius: 12px;
-
-    padding: 15px;
-
-    margin-bottom: 12px;
-
-    box-shadow:
-    0 2px 8px rgba(0,0,0,.06);
-}
-
-.row {
-
-    padding: 7px 0;
-
-    border-bottom: 1px solid #eee;
-
-    word-break: break-word;
-}
-
-.row:last-child {
-
-    border-bottom: none;
-}
-
-.label {
-
-    font-weight: bold;
-}
-
-.accuracy-good {
-
-    color: #16803a;
-
-    font-weight: bold;
-}
-
-.accuracy-medium {
-
-    color: #d47b00;
-
-    font-weight: bold;
-}
-
-.accuracy-bad {
-
-    color: #d00000;
-
-    font-weight: bold;
-}
-
-.map {
-
-    display: inline-block;
-
-    margin-top: 10px;
-
-    padding: 10px 14px;
-
-    background: #16803a;
-
-    color: white;
-
-    text-decoration: none;
-
-    border-radius: 8px;
-
-    font-weight: bold;
-}
-
-.empty {
-
-    text-align: center;
-
-    padding: 25px;
-
-    color: #777;
-}
-
-.error {
-
-    display: none;
-
-    background: #ffecec;
-
-    color: #b00020;
-
-    padding: 14px;
-
-    border-radius: 10px;
-
-    margin-top: 15px;
-
-    white-space: pre-wrap;
-
-    word-break: break-word;
-}
-
-.time {
-
-    color: #666;
-
-    font-size: 14px;
-
-    margin-top: 8px;
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Live Location Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        .row {
+            padding: 9px 0;
+            border-bottom: 1px solid #eee;
+            word-break: break-word;
+        }
+
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .good {
+            color: green;
+            font-weight: bold;
+        }
+
+        .medium {
+            color: #d68910;
+            font-weight: bold;
+        }
+
+        .poor {
+            color: red;
+            font-weight: bold;
+        }
+
+        .history-item {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .history-number {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .map-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: #1976d2;
+            color: white;
+            text-decoration: none;
+            border-radius: 7px;
+            font-weight: bold;
+        }
+
+        .map-btn:hover {
+            background: #125ca1;
+        }
+
+        .status {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+
+        .error {
+            background: #ffe5e5;
+            color: #b00020;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            word-break: break-word;
+        }
+
+        .refresh-info {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
 </head>
-
 
 <body>
 
 <div class="container">
 
-<div class="card">
+    <h1>📍 Live Location Dashboard</h1>
 
-<h1>📍 Location Dashboard</h1>
+    <div id="status" class="status">
+        🔄 Location data loading...
+    </div>
 
-<div id="status"
-class="status">
+    <div id="errorBox"></div>
 
-🔄 Location data पढ़ी जा रही है...
+    <!-- LATEST LOCATION -->
+    <div class="card">
 
-</div>
+        <h2>📍 Latest Location</h2>
 
-<button id="refreshBtn">
+        <div id="latestContent">
+            <div class="loading">
+                Location loading...
+            </div>
+        </div>
 
-🔄 Refresh Location
-
-</button>
-
-
-<!-- =============================
-     LATEST
-============================= -->
-
-<div class="latest">
-
-<h2>🟢 Latest Location</h2>
-
-<div id="latestContent">
-
-लोड हो रहा है...
-
-</div>
-
-</div>
+    </div>
 
 
-<!-- =============================
-     HISTORY
-============================= -->
+    <!-- LOCATION HISTORY -->
+    <div class="card">
 
-<div class="history-title">
+        <h2>🕘 Location History</h2>
 
-📜 Location History
+        <div id="historyContent">
+            <div class="loading">
+                History loading...
+            </div>
+        </div>
 
-</div>
+        <div class="refresh-info">
+            🔄 Automatically refreshes every 5 seconds
+        </div>
 
-<div id="history">
-
-<div class="empty">
-
-History loading...
-
-</div>
-
-</div>
-
-
-<div id="error"
-class="error">
-</div>
-
-
-</div>
+    </div>
 
 </div>
 
 
 <script>
 
-/* =================================
-   SUPABASE
-================================= */
+    // ============================================
+    // SUPABASE SETTINGS
+    // ============================================
 
-const SUPABASE_URL =
-"https://qtfnupdojsqpuywhoryu.supabase.co";
+    const SUPABASE_URL =
+        "https://qtfnupdojsqpuywhoryu.supabase.co";
 
-const SUPABASE_KEY =
-"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
-
-
-/* =================================
-   ELEMENTS
-================================= */
-
-const statusBox =
-document.getElementById("status");
-
-const refreshBtn =
-document.getElementById("refreshBtn");
-
-const latestContent =
-document.getElementById("latestContent");
-
-const historyBox =
-document.getElementById("history");
-
-const errorBox =
-document.getElementById("error");
+    const SUPABASE_KEY =
+        "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* =================================
-   FORMAT TIME
-================================= */
+    // ============================================
+    // DOM ELEMENTS
+    // ============================================
 
-function formatTime(value) {
+    const latestContent =
+        document.getElementById("latestContent");
 
-    if (!value) {
+    const historyContent =
+        document.getElementById("historyContent");
 
-        return "समय उपलब्ध नहीं";
-    }
+    const statusBox =
+        document.getElementById("status");
 
-    const date =
-    new Date(value);
+    const errorBox =
+        document.getElementById("errorBox");
 
-    if (
-        isNaN(date.getTime())
-    ) {
 
-        return value;
-    }
+    // ============================================
+    // FORMAT TIME
+    // ============================================
 
-    return date.toLocaleString(
-        "en-IN",
-        {
+    function formatTime(dateString) {
+
+        if (!dateString) {
+            return "Unknown";
+        }
+
+        const date = new Date(dateString);
+
+        if (isNaN(date.getTime())) {
+            return dateString;
+        }
+
+        return date.toLocaleString("en-IN", {
             dateStyle: "medium",
             timeStyle: "medium"
+        });
+    }
+
+
+    // ============================================
+    // ACCURACY CLASS
+    // ============================================
+
+    function accuracyClass(accuracy) {
+
+        const value = Number(accuracy);
+
+        if (!Number.isFinite(value)) {
+            return "";
         }
-    );
-}
 
+        if (value <= 20) {
+            return "good";
+        }
 
-/* =================================
-   ACCURACY CLASS
-================================= */
+        if (value <= 100) {
+            return "medium";
+        }
 
-function accuracyClass(value) {
-
-    const n =
-    Number(value);
-
-    if (!Number.isFinite(n)) {
-
-        return "";
+        return "poor";
     }
 
-    if (n <= 20) {
 
-        return "accuracy-good";
-    }
+    // ============================================
+    // GOOGLE MAPS LINK
+    // ============================================
 
-    if (n <= 100) {
+    function mapLink(latitude, longitude) {
 
-        return "accuracy-medium";
-    }
+        const lat = Number(latitude);
+        const lon = Number(longitude);
 
-    return "accuracy-bad";
-}
+        if (!Number.isFinite(lat) ||
+            !Number.isFinite(lon)) {
 
-
-/* =================================
-   GOOGLE MAP
-================================= */
-
-function mapLink(
-    latitude,
-    longitude
-) {
-
-    return `
-    <a
-    class="map"
-    target="_blank"
-    href="https://www.google.com/maps?q=${encodeURIComponent(latitude)},${encodeURIComponent(longitude)}">
-    📍 Open Google Maps
-    </a>
-    `;
-}
-
-
-/* =================================
-   LOAD DATA
-================================= */
-
-async function loadLocations() {
-
-    refreshBtn.disabled = true;
-
-    statusBox.textContent =
-    "🔄 Latest location पढ़ी जा रही है...";
-
-    errorBox.style.display =
-    "none";
-
-
-    try {
-
-        /*
-          सबसे नई location पहले
-        */
+            return "";
+        }
 
         const url =
-        SUPABASE_URL +
-        "/rest/v1/locations" +
-        "?select=id,device_id,latitude,longitude,accuracy,created_at" +
-        "&order=created_at.desc" +
-        "&limit=100";
+            "https://www.google.com/maps?q=" +
+            encodeURIComponent(lat + "," + lon);
+
+        return `
+            <a
+                class="map-btn"
+                href="${url}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                🗺️ Open in Google Maps
+            </a>
+        `;
+    }
 
 
-        const response =
-        await fetch(
-            url,
-            {
+    // ============================================
+    // LOAD LOCATIONS FROM SUPABASE
+    // ============================================
+
+    async function loadLocations() {
+
+        errorBox.innerHTML = "";
+
+        statusBox.innerHTML =
+            "🔄 Loading latest location...";
+
+        try {
+
+            const url =
+                SUPABASE_URL +
+                "/rest/v1/locations" +
+                "?select=id,device_id,latitude,longitude,accuracy,created_at" +
+                "&order=created_at.desc" +
+                "&limit=100";
+
+
+            const response = await fetch(url, {
 
                 method: "GET",
 
                 headers: {
-
-                    "apikey":
-                    SUPABASE_KEY,
-
+                    "apikey": SUPABASE_KEY,
                     "Authorization":
-                    "Bearer " +
-                    SUPABASE_KEY
+                        "Bearer " + SUPABASE_KEY
                 }
-            }
-        );
+
+            });
 
 
-        if (!response.ok) {
+            // ====================================
+            // CHECK RESPONSE
+            // ====================================
 
-            const text =
-            await response.text();
+            if (!response.ok) {
 
-            throw new Error(
-                "Supabase Error " +
-                response.status +
-                "\n" +
-                text
-            );
-        }
+                const errorText =
+                    await response.text();
 
-
-        const data =
-        await response.json();
-
-
-        if (
-            !data ||
-            data.length === 0
-        ) {
-
-            latestContent =
-            `<div class="empty">
-            अभी कोई location नहीं मिली।
-            </div>`;
-
-            historyBox.innerHTML =
-            `<div class="empty">
-            कोई history उपलब्ध नहीं है।
-            </div>`;
-
-            statusBox.textContent =
-            "⚠️ कोई location नहीं मिली।";
-
-            refreshBtn.disabled =
-            false;
-
-            return;
-        }
-
-
-        /* =========================
-           LATEST
-        ========================= */
-
-        const latest =
-        data[0];
-
-
-        const latestAccuracy =
-        Number(latest.accuracy);
-
-
-        latestContent = null;
-
-
-        latestContent.innerHTML = "";
-
-
-        latestContent.insertAdjacentHTML(
-            "beforeend",
-
-            `
-            <div class="row">
-                <div class="label">📱 Device:</div>
-                ${latest.device_id || "Unknown"}
-            </div>
-
-            <div class="row">
-                <div class="label">🌐 Latitude:</div>
-                ${latest.latitude}
-            </div>
-
-            <div class="row">
-                <div class="label">🌐 Longitude:</div>
-                ${latest.longitude}
-            </div>
-
-            <div class="row">
-                <div class="label">🎯 Accuracy:</div>
-                <span class="${accuracyClass(latestAccuracy)}">
-                    ${Number.isFinite(latestAccuracy)
-                        ? Math.round(latestAccuracy) + " मीटर"
-                        : latest.accuracy}
-                </span>
-            </div>
-
-            <div class="row">
-                <div class="label">🕐 Created at:</div>
-                ${formatTime(latest.created_at)}
-            </div>
-
-            ${mapLink(
-                latest.latitude,
-                latest.longitude
-            )}
-            `
-        );
-
-
-        /* =========================
-           HISTORY
-        ========================= */
-
-        historyBox.innerHTML = "";
-
-
-        data.forEach(
-            function(location, index) {
-
-                const accuracy =
-                Number(location.accuracy);
-
-
-                const item =
-                document.createElement(
-                    "div"
+                throw new Error(
+                    "Supabase Error: " +
+                    response.status +
+                    " - " +
+                    errorText
                 );
-
-                item.className =
-                "history-item";
+            }
 
 
-                item.innerHTML = `
+            const data =
+                await response.json();
 
-                <div class="row">
-                    <div class="label">
-                        #${index + 1}
+
+            // ====================================
+            // NO DATA
+            // ====================================
+
+            if (!Array.isArray(data) ||
+                data.length === 0) {
+
+                latestContent.innerHTML = `
+                    <div class="empty">
+                        📭 अभी कोई location data नहीं मिला।
                     </div>
-                </div>
+                `;
 
+                historyContent.innerHTML = `
+                    <div class="empty">
+                        Location History खाली है।
+                    </div>
+                `;
+
+                statusBox.innerHTML =
+                    "⚠️ No location data found";
+
+                return;
+            }
+
+
+            // ====================================
+            // LATEST LOCATION
+            // ====================================
+
+            const latest = data[0];
+
+            const latestAccuracy =
+                Number(latest.accuracy);
+
+
+            // IMPORTANT:
+            // यहाँ latestContent = null जैसी गलती नहीं है।
+            // सीधे innerHTML clear किया जा रहा है।
+
+            latestContent.innerHTML = "";
+
+
+            latestContent.insertAdjacentHTML(
+                "beforeend",
+                `
                 <div class="row">
                     <div class="label">
                         📱 Device:
                     </div>
-                    ${location.device_id || "Unknown"}
+                    ${latest.device_id || "Unknown"}
                 </div>
 
                 <div class="row">
                     <div class="label">
                         🌐 Latitude:
                     </div>
-                    ${location.latitude}
+                    ${latest.latitude}
                 </div>
 
                 <div class="row">
                     <div class="label">
                         🌐 Longitude:
                     </div>
-                    ${location.longitude}
+                    ${latest.longitude}
                 </div>
 
                 <div class="row">
@@ -622,95 +418,176 @@ async function loadLocations() {
                         🎯 Accuracy:
                     </div>
 
-                    <span class="${accuracyClass(accuracy)}">
+                    <span class="${accuracyClass(latestAccuracy)}">
 
-                    ${
-                        Number.isFinite(accuracy)
-                        ? Math.round(accuracy)
-                          + " मीटर"
-                        : location.accuracy
-                    }
+                        ${
+                            Number.isFinite(latestAccuracy)
+                            ? Math.round(latestAccuracy) + " मीटर"
+                            : latest.accuracy
+                        }
 
                     </span>
-
                 </div>
 
-                <div class="time">
+                <div class="row">
+                    <div class="label">
+                        🕐 Created At:
+                    </div>
 
-                    🕐 ${formatTime(
-                        location.created_at
-                    )}
-
+                    ${formatTime(latest.created_at)}
                 </div>
 
                 ${mapLink(
-                    location.latitude,
-                    location.longitude
+                    latest.latitude,
+                    latest.longitude
                 )}
+                `
+            );
 
-                `;
+
+            // ====================================
+            // LOCATION HISTORY
+            // ====================================
+
+            historyContent.innerHTML = "";
 
 
-                historyBox.appendChild(
-                    item
+            data.forEach((location, index) => {
+
+                const accuracy =
+                    Number(location.accuracy);
+
+
+                historyContent.insertAdjacentHTML(
+                    "beforeend",
+                    `
+                    <div class="history-item">
+
+                        <div class="history-number">
+                            #${index + 1}
+                        </div>
+
+                        <div class="row">
+
+                            <div class="label">
+                                📱 Device:
+                            </div>
+
+                            ${location.device_id || "Unknown"}
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🌐 Latitude:
+                            </div>
+
+                            ${location.latitude}
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🌐 Longitude:
+                            </div>
+
+                            ${location.longitude}
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🎯 Accuracy:
+                            </div>
+
+                            <span class="${accuracyClass(accuracy)}">
+
+                                ${
+                                    Number.isFinite(accuracy)
+                                    ? Math.round(accuracy) + " मीटर"
+                                    : location.accuracy
+                                }
+
+                            </span>
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🕐 Time:
+                            </div>
+
+                            ${formatTime(location.created_at)}
+
+                        </div>
+
+
+                        ${mapLink(
+                            location.latitude,
+                            location.longitude
+                        )}
+
+                    </div>
+                    `
                 );
 
-            }
-        );
+            });
 
 
-        statusBox.textContent =
-        "🟢 Latest location मिल गई।";
+            // ====================================
+            // SUCCESS STATUS
+            // ====================================
+
+            statusBox.innerHTML =
+                "🟢 Location Connected • " +
+                data.length +
+                " records found";
 
 
-    } catch (error) {
+        } catch (error) {
 
-        console.error(error);
+            console.error(error);
 
-        statusBox.textContent =
-        "🔴 Location पढ़ने में समस्या।";
+            statusBox.innerHTML =
+                "🔴 Location data load failed";
 
-        errorBox.style.display =
-        "block";
 
-        errorBox.textContent =
-        error.message;
+            errorBox.innerHTML = `
+                <div class="error">
+                    ❌ ${error.message}
+                </div>
+            `;
+
+        }
+
     }
 
 
-    refreshBtn.disabled =
-    false;
-}
+    // ============================================
+    // FIRST LOAD
+    // ============================================
+
+    loadLocations();
 
 
-/* =================================
-   REFRESH
-================================= */
+    // ============================================
+    // AUTO REFRESH EVERY 5 SECONDS
+    // ============================================
 
-refreshBtn.addEventListener(
-    "click",
-    loadLocations
-);
-
-
-/* =================================
-   FIRST LOAD
-================================= */
-
-loadLocations();
-
-
-/* =================================
-   AUTO REFRESH
-================================= */
-
-setInterval(
-    loadLocations,
-    5000
-);
+    setInterval(
+        loadLocations,
+        5000
+    );
 
 </script>
 
 </body>
-
 </html>
