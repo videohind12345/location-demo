@@ -1,12 +1,17 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>Live Location Share</title>
 
 <style>
+
 * {
     box-sizing: border-box;
 }
@@ -57,12 +62,18 @@ button {
     color: white;
 }
 
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .status {
     margin-top: 20px;
     padding: 15px;
     border-radius: 12px;
     text-align: center;
     background: #f1f1f1;
+    font-weight: bold;
 }
 
 .info {
@@ -85,6 +96,7 @@ button {
 
 .label {
     font-weight: bold;
+    margin-bottom: 3px;
 }
 
 .error {
@@ -94,8 +106,28 @@ button {
     color: #b00020;
     border-radius: 10px;
     display: none;
+    word-break: break-word;
 }
+
+.success {
+    margin-top: 15px;
+    padding: 12px;
+    background: #e9f8ed;
+    color: #126b2e;
+    border-radius: 10px;
+    display: none;
+    word-break: break-word;
+}
+
+.small {
+    font-size: 13px;
+    color: #666;
+    margin-top: 10px;
+    text-align: center;
+}
+
 </style>
+
 </head>
 
 <body>
@@ -106,43 +138,60 @@ button {
 
 <h1>📍 Live Location Share</h1>
 
+
 <button id="startBtn">
 📍 Start Location Sharing
 </button>
+
 
 <button id="stopBtn">
 ⛔ Stop Sharing
 </button>
 
+
 <div id="status" class="status">
 Location sharing अभी बंद है।
 </div>
 
+
 <div id="info" class="info">
 
 <div class="row">
-<div class="label">📱 Device ID</div>
-<div id="device"></div>
+    <div class="label">📱 Device ID</div>
+    <div id="device"></div>
 </div>
 
 <div class="row">
-<div class="label">🌐 Latitude</div>
-<div id="latitude"></div>
+    <div class="label">🌐 Latitude</div>
+    <div id="latitude"></div>
 </div>
 
 <div class="row">
-<div class="label">🌐 Longitude</div>
-<div id="longitude"></div>
+    <div class="label">🌐 Longitude</div>
+    <div id="longitude"></div>
 </div>
 
 <div class="row">
-<div class="label">🎯 Accuracy</div>
-<div id="accuracy"></div>
+    <div class="label">🎯 Accuracy</div>
+    <div id="accuracy"></div>
 </div>
 
 </div>
 
-<div id="error" class="error"></div>
+
+<div id="success"
+     class="success">
+</div>
+
+
+<div id="error"
+     class="error">
+</div>
+
+
+<div class="small">
+Location updates automatically server पर भेजे जाएंगे।
+</div>
 
 </div>
 
@@ -151,9 +200,9 @@ Location sharing अभी बंद है।
 
 <script>
 
-/* =====================================
-   SUPABASE
-===================================== */
+/* =====================================================
+   SUPABASE CONFIG
+===================================================== */
 
 const SUPABASE_URL =
 "https://qtfnupdojsqpuywhoryu.supabase.co";
@@ -162,9 +211,9 @@ const SUPABASE_KEY =
 "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* =====================================
+/* =====================================================
    ELEMENTS
-===================================== */
+===================================================== */
 
 const startBtn =
 document.getElementById("startBtn");
@@ -177,6 +226,9 @@ document.getElementById("status");
 
 const infoBox =
 document.getElementById("info");
+
+const successBox =
+document.getElementById("success");
 
 const errorBox =
 document.getElementById("error");
@@ -194,23 +246,25 @@ const accuracyEl =
 document.getElementById("accuracy");
 
 
-/* =====================================
+/* =====================================================
    DEVICE ID
-===================================== */
+===================================================== */
 
 function getDeviceId() {
 
     let id =
     localStorage.getItem("location_device_id");
 
+
     if (!id) {
 
         if (
             window.crypto &&
-            crypto.randomUUID
+            typeof crypto.randomUUID === "function"
         ) {
 
-            id = crypto.randomUUID();
+            id =
+            crypto.randomUUID();
 
         } else {
 
@@ -219,9 +273,10 @@ function getDeviceId() {
             Date.now() +
             "-" +
             Math.random()
-            .toString(36)
-            .substring(2, 10);
+                .toString(36)
+                .substring(2, 10);
         }
+
 
         localStorage.setItem(
             "location_device_id",
@@ -229,38 +284,104 @@ function getDeviceId() {
         );
     }
 
+
     return id;
 }
 
-const DEVICE_ID = getDeviceId();
 
-deviceEl.textContent = DEVICE_ID;
+const DEVICE_ID =
+getDeviceId();
 
 
-/* =====================================
+deviceEl.textContent =
+DEVICE_ID;
+
+
+/* =====================================================
    WATCH ID
-===================================== */
+===================================================== */
 
 let watchId = null;
 
 
-/* =====================================
-   SEND LOCATION
-===================================== */
+/* =====================================================
+   SENDING LOCK
+===================================================== */
+
+let sendingLocation = false;
+
+
+/* =====================================================
+   HIDE MESSAGES
+===================================================== */
+
+function clearMessages() {
+
+    errorBox.style.display =
+    "none";
+
+    successBox.style.display =
+    "none";
+
+    errorBox.textContent =
+    "";
+
+    successBox.textContent =
+    "";
+}
+
+
+/* =====================================================
+   SHOW SERVER ERROR
+===================================================== */
+
+function showServerError(message) {
+
+    errorBox.style.display =
+    "block";
+
+    errorBox.textContent =
+    message;
+}
+
+
+/* =====================================================
+   SEND LOCATION TO SUPABASE
+===================================================== */
 
 async function sendLocation(position) {
 
     const latitude =
-    position.coords.latitude;
+    Number(position.coords.latitude);
 
     const longitude =
-    position.coords.longitude;
+    Number(position.coords.longitude);
 
     const accuracy =
-    position.coords.accuracy;
+    Number(position.coords.accuracy);
 
 
-    /* Show immediately */
+    /* -----------------------------------------------
+       Validate GPS data
+    ----------------------------------------------- */
+
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        !Number.isFinite(accuracy)
+    ) {
+
+        showServerError(
+            "❌ GPS data invalid है।"
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------
+       Show location immediately
+    ----------------------------------------------- */
 
     latitudeEl.textContent =
     latitude.toFixed(7);
@@ -269,26 +390,80 @@ async function sendLocation(position) {
     longitude.toFixed(7);
 
     accuracyEl.textContent =
-    Math.round(accuracy) + " मीटर";
+    Math.round(accuracy) +
+    " मीटर";
 
-    infoBox.style.display = "block";
+    infoBox.style.display =
+    "block";
 
 
     statusBox.textContent =
-    "🟢 Location server पर भेजी जा रही है...";
+    "🟡 Location server पर भेजी जा रही है...";
+
+
+    successBox.style.display =
+    "none";
+
+
+    /* -----------------------------------------------
+       Prevent overlapping requests
+    ----------------------------------------------- */
+
+    if (sendingLocation) {
+
+        console.log(
+            "Previous location request अभी चल रही है।"
+        );
+
+        return;
+    }
+
+
+    sendingLocation = true;
 
 
     try {
 
-        /*
-         IMPORTANT:
-         हर update के लिए नई row बनेगी।
-        */
+        /* -------------------------------------------
+           Data to insert
+        ------------------------------------------- */
+
+        const locationData = {
+
+            device_id:
+            DEVICE_ID,
+
+            latitude:
+            latitude,
+
+            longitude:
+            longitude,
+
+            accuracy:
+            accuracy,
+
+            created_at:
+            new Date().toISOString()
+
+        };
+
+
+        console.log(
+            "Sending location:",
+            locationData
+        );
+
+
+        /* -------------------------------------------
+           Supabase INSERT
+        ------------------------------------------- */
 
         const response =
         await fetch(
+
             SUPABASE_URL +
             "/rest/v1/locations",
+
             {
 
                 method: "POST",
@@ -305,47 +480,111 @@ async function sendLocation(position) {
                     "Content-Type":
                     "application/json",
 
+                    "Accept":
+                    "application/json",
+
                     "Prefer":
-                    "return=minimal"
+                    "return=representation"
+
                 },
 
-                body: JSON.stringify({
+                body:
+                JSON.stringify(
+                    locationData
+                )
 
-                    device_id:
-                    DEVICE_ID,
-
-                    latitude:
-                    latitude,
-
-                    longitude:
-                    longitude,
-
-                    accuracy:
-                    accuracy,
-
-                    created_at:
-                    new Date().toISOString()
-
-                })
             }
         );
 
 
+        /* -------------------------------------------
+           Read server response
+        ------------------------------------------- */
+
+        const responseText =
+        await response.text();
+
+
+        console.log(
+            "Supabase status:",
+            response.status
+        );
+
+        console.log(
+            "Supabase response:",
+            responseText
+        );
+
+
+        /* -------------------------------------------
+           ERROR
+        ------------------------------------------- */
+
         if (!response.ok) {
 
-            const text =
-            await response.text();
+            let detailedError =
+            responseText;
+
+
+            try {
+
+                const json =
+                JSON.parse(
+                    responseText
+                );
+
+
+                if (json.message) {
+
+                    detailedError =
+                    json.message;
+
+                } else if (json.error) {
+
+                    detailedError =
+                    json.error;
+
+                } else if (json.hint) {
+
+                    detailedError =
+                    json.hint;
+                }
+
+            } catch (e) {
+
+                /* Response JSON नहीं है */
+            }
+
 
             throw new Error(
+
+                "Supabase Error\n\n" +
+
+                "HTTP Status: " +
                 response.status +
-                " " +
-                text
+
+                "\n\n" +
+
+                detailedError
+
             );
         }
 
 
+        /* -------------------------------------------
+           SUCCESS
+        ------------------------------------------- */
+
         statusBox.textContent =
-        "🟢 Location server पर successfully update हो गई।";
+        "🟢 Location server पर successfully save हो गई।";
+
+
+        successBox.style.display =
+        "block";
+
+
+        successBox.textContent =
+        "✅ Server ने location स्वीकार कर ली।";
 
 
         errorBox.style.display =
@@ -354,23 +593,32 @@ async function sendLocation(position) {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Location send error:",
+            error
+        );
+
 
         statusBox.textContent =
         "🔴 Server पर location भेजने में समस्या।";
 
-        errorBox.style.display =
-        "block";
 
-        errorBox.textContent =
-        error.message;
+        showServerError(
+            "❌ " +
+            error.message
+        );
+
+    } finally {
+
+        sendingLocation =
+        false;
     }
 }
 
 
-/* =====================================
+/* =====================================================
    LOCATION SUCCESS
-===================================== */
+===================================================== */
 
 function locationSuccess(position) {
 
@@ -378,14 +626,14 @@ function locationSuccess(position) {
 }
 
 
-/* =====================================
+/* =====================================================
    LOCATION ERROR
-===================================== */
+===================================================== */
 
 function locationError(error) {
 
     let message =
-    "Location नहीं मिल पाई।";
+    "❌ Location नहीं मिल पाई।";
 
 
     if (error.code === 1) {
@@ -393,52 +641,84 @@ function locationError(error) {
         message =
         "❌ Location permission denied है।";
 
-    } else if (error.code === 2) {
+    }
+
+    else if (error.code === 2) {
 
         message =
         "❌ Location उपलब्ध नहीं है।";
 
-    } else if (error.code === 3) {
+    }
+
+    else if (error.code === 3) {
 
         message =
         "❌ Location मिलने में timeout हुआ।";
+
     }
 
 
     statusBox.textContent =
     message;
 
-    errorBox.style.display =
-    "block";
 
-    errorBox.textContent =
-    message;
+    showServerError(
+        message
+    );
 }
 
 
-/* =====================================
-   START
-===================================== */
+/* =====================================================
+   START LOCATION
+===================================================== */
 
 function startLocation() {
 
-    errorBox.style.display =
-    "none";
+    clearMessages();
 
+
+    /* -----------------------------------------------
+       Browser support
+    ----------------------------------------------- */
 
     if (!navigator.geolocation) {
 
         statusBox.textContent =
         "❌ यह browser location support नहीं करता।";
 
+        showServerError(
+            "इस browser में Geolocation API उपलब्ध नहीं है।"
+        );
+
         return;
     }
 
+
+    /* -----------------------------------------------
+       HTTPS check
+    ----------------------------------------------- */
 
     if (!window.isSecureContext) {
 
         statusBox.textContent =
         "❌ Location के लिए HTTPS जरूरी है।";
+
+        showServerError(
+            "यह page HTTPS पर नहीं चल रहा है।"
+        );
+
+        return;
+    }
+
+
+    /* -----------------------------------------------
+       Already running
+    ----------------------------------------------- */
+
+    if (watchId !== null) {
+
+        statusBox.textContent =
+        "🟢 Location sharing पहले से चालू है।";
 
         return;
     }
@@ -448,9 +728,13 @@ function startLocation() {
     "⏳ Location शुरू की जा रही है...";
 
 
-    /*
-       पहले तुरंत एक location
-    */
+    startBtn.disabled =
+    true;
+
+
+    /* -----------------------------------------------
+       First immediate location
+    ----------------------------------------------- */
 
     navigator.geolocation.getCurrentPosition(
 
@@ -459,17 +743,21 @@ function startLocation() {
         locationError,
 
         {
+
             enableHighAccuracy: true,
+
             timeout: 20000,
+
             maximumAge: 0
+
         }
 
     );
 
 
-    /*
-       इसके बाद लगातार location updates
-    */
+    /* -----------------------------------------------
+       Continuous location updates
+    ----------------------------------------------- */
 
     watchId =
     navigator.geolocation.watchPosition(
@@ -479,18 +767,26 @@ function startLocation() {
         locationError,
 
         {
+
             enableHighAccuracy: true,
+
             timeout: 20000,
+
             maximumAge: 5000
+
         }
 
     );
+
+
+    statusBox.textContent =
+    "🟢 Location sharing चालू है...";
 }
 
 
-/* =====================================
-   STOP
-===================================== */
+/* =====================================================
+   STOP LOCATION
+===================================================== */
 
 function stopLocation() {
 
@@ -504,19 +800,24 @@ function stopLocation() {
     }
 
 
+    startBtn.disabled =
+    false;
+
+
     statusBox.textContent =
     "⛔ Location sharing बंद है।";
 }
 
 
-/* =====================================
-   BUTTONS
-===================================== */
+/* =====================================================
+   BUTTON EVENTS
+===================================================== */
 
 startBtn.addEventListener(
     "click",
     startLocation
 );
+
 
 stopBtn.addEventListener(
     "click",
@@ -524,9 +825,9 @@ stopBtn.addEventListener(
 );
 
 
-/* =====================================
-   DEVICE DISPLAY
-===================================== */
+/* =====================================================
+   INITIAL DEVICE DISPLAY
+===================================================== */
 
 deviceEl.textContent =
 DEVICE_ID;
@@ -535,3 +836,4 @@ DEVICE_ID;
 
 </body>
 </html>
+```
