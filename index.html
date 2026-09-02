@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
 
@@ -50,6 +51,12 @@ border:0;
 border-radius:12px;
 font-size:17px;
 cursor:pointer;
+-webkit-tap-highlight-color:transparent;
+}
+
+button:focus{
+outline:2px solid #dc2626;
+outline-offset:2px;
 }
 
 button:disabled{
@@ -86,7 +93,7 @@ font-weight:bold;
 .status{
 margin-top:10px;
 font-size:14px;
-color:#666;
+color:#555;
 }
 
 </style>
@@ -106,7 +113,7 @@ color:#666;
 <button
 id="startButton"
 class="location"
-onclick="startLocation()">
+type="button">
 
 📍 Share My Location
 
@@ -115,7 +122,7 @@ onclick="startLocation()">
 <button
 id="stopButton"
 class="stop"
-onclick="stopLocation()">
+type="button">
 
 ⛔ Stop Sharing
 
@@ -126,13 +133,11 @@ onclick="stopLocation()">
 </div>
 
 <div class="status" id="status">
-Location sharing बंद है।
+Location sharing अभी बंद है।
 </div>
 
 <div id="result">
-
 Location sharing अभी बंद है।
-
 </div>
 
 </div>
@@ -141,7 +146,7 @@ Location sharing अभी बंद है।
 <script>
 
 /* =================================================
-SUPABASE SETTINGS
+SUPABASE
 ================================================= */
 
 const SUPABASE_URL =
@@ -149,6 +154,15 @@ const SUPABASE_URL =
 
 const SUPABASE_KEY =
 "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+
+
+/* =================================================
+SETTINGS
+================================================= */
+
+const MAX_LOCATIONS = 50;
+
+const LOCATION_INTERVAL = 5000;
 
 
 /* =================================================
@@ -160,7 +174,8 @@ localStorage.getItem("location_device_id");
 
 if(!deviceId){
 
-deviceId = crypto.randomUUID();
+deviceId =
+crypto.randomUUID();
 
 localStorage.setItem(
 "location_device_id",
@@ -168,22 +183,6 @@ deviceId
 );
 
 }
-
-
-/* =================================================
-LOCATION SETTINGS
-================================================= */
-
-const MAX_LOCATIONS = 50;
-
-/*
-हर कितने milliseconds में
-नई location लेने की कोशिश करनी है।
-
-5000 = 5 seconds
-*/
-
-const LOCATION_INTERVAL = 5000;
 
 
 /* =================================================
@@ -200,22 +199,48 @@ let isGettingLocation = false;
 
 
 /* =================================================
-START LOCATION
+ELEMENTS
 ================================================= */
-
-function startLocation(){
-
-const result =
-document.getElementById("result");
-
-const status =
-document.getElementById("status");
 
 const startButton =
 document.getElementById("startButton");
 
+const stopButton =
+document.getElementById("stopButton");
 
-/* Browser support */
+const counter =
+document.getElementById("counter");
+
+const status =
+document.getElementById("status");
+
+const result =
+document.getElementById("result");
+
+
+/* =================================================
+BUTTON EVENTS
+================================================= */
+
+startButton.addEventListener(
+"click",
+startLocation
+);
+
+stopButton.addEventListener(
+"click",
+stopLocation
+);
+
+
+/* =================================================
+START
+================================================= */
+
+function startLocation(){
+
+console.log("START BUTTON CLICKED");
+
 
 if(!navigator.geolocation){
 
@@ -227,7 +252,9 @@ return;
 }
 
 
-/* HTTPS check */
+/*
+HTTPS check
+*/
 
 if(
 location.protocol !== "https:" &&
@@ -235,18 +262,20 @@ location.hostname !== "localhost"
 ){
 
 result.innerHTML =
-"❌ Location के लिए HTTPS connection जरूरी है।";
+"❌ Location के लिए HTTPS जरूरी है।";
 
 return;
 
 }
 
 
-/* Already sharing */
+/*
+Already running
+*/
 
 if(isSharing){
 
-result.innerHTML =
+status.innerText =
 "🟢 Location sharing पहले से चालू है।";
 
 return;
@@ -254,11 +283,13 @@ return;
 }
 
 
-/* Reset */
+/*
+Reset
+*/
 
 locationCount = 0;
 
-document.getElementById("counter").innerText =
+counter.innerText =
 "0 / 50";
 
 isSharing = true;
@@ -266,23 +297,21 @@ isSharing = true;
 startButton.disabled = true;
 
 status.innerText =
-"🟢 Location sharing चालू है।";
-
-
-result.innerHTML =
 "⏳ Location permission माँगी जा रही है...";
 
+result.innerHTML =
+"⏳ कृपया Location permission में Allow दबाएँ।";
+
 
 /*
-पहली location तुरंत लें
+पहली location तुरंत
 */
 
-getAndSendLocation();
+getLocation();
 
 
 /*
-इसके बाद हर 5 सेकंड में
-नई location लेने की कोशिश करें।
+हर 5 सेकंड
 */
 
 locationTimer =
@@ -295,7 +324,7 @@ isSharing &&
 locationCount < MAX_LOCATIONS
 ){
 
-getAndSendLocation();
+getLocation();
 
 }
 
@@ -309,22 +338,16 @@ LOCATION_INTERVAL
 
 
 /* =================================================
-GET LOCATION + SEND
+GET LOCATION
 ================================================= */
 
-function getAndSendLocation(){
+function getLocation(){
 
 if(!isSharing){
 
 return;
 
 }
-
-
-/*
-एक ही समय पर दो GPS requests
-न चलें।
-*/
 
 if(isGettingLocation){
 
@@ -334,7 +357,7 @@ return;
 
 if(locationCount >= MAX_LOCATIONS){
 
-finishLocationSharing();
+finishSharing();
 
 return;
 
@@ -342,168 +365,15 @@ return;
 
 isGettingLocation = true;
 
-
-document.getElementById("status").innerText =
-"📡 नई location प्राप्त की जा रही है...";
+status.innerText =
+"📡 Location प्राप्त की जा रही है...";
 
 
 navigator.geolocation.getCurrentPosition(
 
-async function(position){
+handleLocation,
 
-isGettingLocation = false;
-
-
-if(!isSharing){
-
-return;
-
-}
-
-
-/* GPS DATA */
-
-const latitude =
-position.coords.latitude;
-
-const longitude =
-position.coords.longitude;
-
-const accuracy =
-position.coords.accuracy;
-
-
-/*
-पहले Supabase में भेजें।
-Counter तभी बढ़ेगा जब server
-success response देगा।
-*/
-
-const success =
-await sendLocation(
-latitude,
-longitude,
-accuracy
-);
-
-
-if(success){
-
-locationCount++;
-
-
-/* Counter */
-
-document.getElementById("counter").innerText =
-locationCount + " / " + MAX_LOCATIONS;
-
-
-/* Status */
-
-document.getElementById("status").innerText =
-"🟢 Location sharing चालू है।";
-
-
-/* Result */
-
-document.getElementById("result").innerHTML =
-
-"🟢 Location sharing चालू है।<br><br>" +
-
-"Latitude: " +
-latitude +
-
-"<br>" +
-
-"Longitude: " +
-longitude +
-
-"<br>" +
-
-"Accuracy: लगभग " +
-Math.round(accuracy) +
-" मीटर<br><br>" +
-
-"📡 Location server पर भेजी गई।<br>" +
-
-"📍 Update: " +
-locationCount +
-" / " +
-MAX_LOCATIONS;
-
-
-/*
-50 successful locations पूरी
-*/
-
-if(
-locationCount >= MAX_LOCATIONS
-){
-
-finishLocationSharing();
-
-}
-
-}
-
-},
-
-function(error){
-
-isGettingLocation = false;
-
-let message =
-"Location नहीं मिली।";
-
-
-if(error.code === 1){
-
-message =
-"Location permission deny कर दी गई।";
-
-}
-
-else if(error.code === 2){
-
-message =
-"Location उपलब्ध नहीं है।";
-
-}
-
-else if(error.code === 3){
-
-message =
-"Location प्राप्त करने में timeout हुआ।";
-
-}
-
-
-document.getElementById("status").innerText =
-"⚠️ Location प्राप्त नहीं हुई।";
-
-
-document.getElementById("result").innerHTML =
-
-"⚠️ " +
-message +
-
-"<br><br>" +
-
-"अगली कोशिश थोड़ी देर में की जाएगी।";
-
-
-/*
-Permission denied होने पर
-बार-बार request नहीं करेंगे।
-*/
-
-if(error.code === 1){
-
-stopLocation();
-
-}
-
-},
+handleLocationError,
 
 {
 
@@ -521,13 +391,214 @@ maximumAge:0
 
 
 /* =================================================
-SEND LOCATION TO SUPABASE
+LOCATION SUCCESS
 ================================================= */
 
-async function sendLocation(
+async function handleLocation(position){
+
+isGettingLocation = false;
+
+
+if(!isSharing){
+
+return;
+
+}
+
+
+const latitude =
+position.coords.latitude;
+
+const longitude =
+position.coords.longitude;
+
+const accuracy =
+position.coords.accuracy;
+
+
+status.innerText =
+"📡 Location server पर भेजी जा रही है...";
+
+
+const success =
+await sendLocation(
+
 latitude,
 longitude,
 accuracy
+
+);
+
+
+if(!success){
+
+status.innerText =
+"⚠️ Location server पर नहीं भेजी गई।";
+
+return;
+
+}
+
+
+/*
+SUCCESS
+*/
+
+locationCount++;
+
+counter.innerText =
+locationCount +
+" / " +
+MAX_LOCATIONS;
+
+
+status.innerText =
+"🟢 Location sharing चालू है।";
+
+
+result.innerHTML =
+
+"🟢 Location सफलतापूर्वक भेजी गई।" +
+
+"<br><br>" +
+
+"Latitude: " +
+latitude +
+
+"<br>" +
+
+"Longitude: " +
+longitude +
+
+"<br>" +
+
+"Accuracy: लगभग " +
+Math.round(accuracy) +
+" मीटर" +
+
+"<br><br>" +
+
+"📡 Server पर भेजी गई।" +
+
+"<br>" +
+
+"📍 Update: " +
+locationCount +
+" / " +
+MAX_LOCATIONS;
+
+
+/*
+50 complete
+*/
+
+if(
+locationCount >= MAX_LOCATIONS
+){
+
+finishSharing();
+
+}
+
+}
+
+
+/* =================================================
+LOCATION ERROR
+================================================= */
+
+function handleLocationError(error){
+
+isGettingLocation = false;
+
+
+console.log(
+"Location Error:",
+error
+);
+
+
+let message = "";
+
+
+if(error.code === 1){
+
+message =
+"❌ Location permission deny कर दी गई।";
+
+}
+
+else if(error.code === 2){
+
+message =
+"❌ Location उपलब्ध नहीं है।";
+
+}
+
+else if(error.code === 3){
+
+message =
+"❌ Location प्राप्त करने में timeout हुआ।";
+
+}
+
+else{
+
+message =
+"❌ Location प्राप्त करने में समस्या हुई।";
+
+}
+
+
+/*
+Permission denied
+*/
+
+if(error.code === 1){
+
+isSharing = false;
+
+if(locationTimer !== null){
+
+clearInterval(locationTimer);
+
+locationTimer = null;
+
+}
+
+startButton.disabled = false;
+
+}
+
+
+/*
+Screen
+*/
+
+status.innerText =
+"⚠️ Location error";
+
+result.innerHTML =
+
+message +
+
+"<br><br>" +
+
+"अगर permission बंद है तो browser settings में Location को Allow करें।";
+
+}
+
+
+/* =================================================
+SEND TO SUPABASE
+================================================= */
+
+async function sendLocation(
+
+latitude,
+longitude,
+accuracy
+
 ){
 
 try{
@@ -580,37 +651,29 @@ accuracy
 );
 
 
-/* Server response */
-
 if(!response.ok){
 
 const errorText =
 await response.text();
 
 console.log(
-"Supabase Error:",
+"SUPABASE ERROR:",
 errorText
 );
 
-document.getElementById("status").innerText =
-"⚠️ Server error";
 
+result.innerHTML =
 
-document.getElementById("result").innerHTML +=
+"❌ Supabase Error" +
 
 "<br><br>" +
 
-"⚠️ Server पर location भेजने में समस्या।";
-
+errorText;
 
 return false;
 
 }
 
-
-/*
-Successfully saved
-*/
 
 return true;
 
@@ -619,21 +682,18 @@ return true;
 catch(error){
 
 console.log(
-"Network Error:",
+"NETWORK ERROR:",
 error
 );
 
 
-document.getElementById("status").innerText =
-"⚠️ Internet समस्या";
+result.innerHTML =
 
-
-document.getElementById("result").innerHTML +=
+"❌ Internet / Network Error" +
 
 "<br><br>" +
 
-"⚠️ Internet connection की समस्या।";
-
+error.message;
 
 return false;
 
@@ -643,17 +703,15 @@ return false;
 
 
 /* =================================================
-FINISH AFTER 50
+FINISH 50
 ================================================= */
 
-function finishLocationSharing(){
+function finishSharing(){
 
 isSharing = false;
 
 isGettingLocation = false;
 
-
-/* Timer बंद */
 
 if(locationTimer !== null){
 
@@ -664,21 +722,14 @@ locationTimer = null;
 }
 
 
-/* Start button वापस enable */
-
-document.getElementById("startButton").disabled =
-false;
+startButton.disabled = false;
 
 
-/* Status */
-
-document.getElementById("status").innerText =
-"✅ Location sharing पूरा हो गया।";
+status.innerText =
+"✅ 50 location updates पूरे हो गए।";
 
 
-/* Result */
-
-document.getElementById("result").innerHTML +=
+result.innerHTML +=
 
 "<br><br>" +
 
@@ -686,13 +737,13 @@ document.getElementById("result").innerHTML +=
 
 "<br>" +
 
-"🔴 Location sharing अपने-आप बंद कर दी गई।";
+"🔴 Location sharing अपने-आप बंद हो गई।";
 
 }
 
 
 /* =================================================
-STOP LOCATION
+STOP
 ================================================= */
 
 function stopLocation(){
@@ -702,8 +753,6 @@ isSharing = false;
 isGettingLocation = false;
 
 
-/* Timer बंद */
-
 if(locationTimer !== null){
 
 clearInterval(locationTimer);
@@ -713,21 +762,14 @@ locationTimer = null;
 }
 
 
-/* Start button */
-
-document.getElementById("startButton").disabled =
-false;
+startButton.disabled = false;
 
 
-/* Status */
-
-document.getElementById("status").innerText =
+status.innerText =
 "🔴 Location sharing बंद है।";
 
 
-/* Result */
-
-document.getElementById("result").innerHTML =
+result.innerHTML =
 
 "🔴 Location sharing बंद कर दी गई।" +
 
@@ -737,20 +779,13 @@ document.getElementById("result").innerHTML =
 
 locationCount +
 
-" / " +
-
-MAX_LOCATIONS;
+" / 50";
 
 }
-
-
-/* =================================================
-END
-================================================= */
 
 </script>
 
 </body>
 
 </html>
-
+```
