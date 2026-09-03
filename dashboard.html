@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -306,7 +307,7 @@
             const url =
                 SUPABASE_URL +
                 "/rest/v1/locations" +
-                "?select=id,device_id,latitude,longitude,accuracy,created_at" +
+                "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
                 "&order=created_at.desc" +
                 "&limit=100";
 
@@ -382,10 +383,6 @@
                 Number(latest.accuracy);
 
 
-            // IMPORTANT:
-            // यहाँ latestContent = null जैसी गलती नहीं है।
-            // सीधे innerHTML clear किया जा रहा है।
-
             latestContent.innerHTML = "";
 
 
@@ -397,6 +394,20 @@
                         📱 Device:
                     </div>
                     ${latest.device_id || "Unknown"}
+                </div>
+
+                <div class="row">
+                    <div class="label">
+                        🏙️ City:
+                    </div>
+                    ${latest.city || "उपलब्ध नहीं"}
+                </div>
+
+                <div class="row">
+                    <div class="label">
+                        🗺️ State:
+                    </div>
+                    ${latest.state || "उपलब्ध नहीं"}
                 </div>
 
                 <div class="row">
@@ -474,6 +485,28 @@
                             </div>
 
                             ${location.device_id || "Unknown"}
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🏙️ City:
+                            </div>
+
+                            ${location.city || "उपलब्ध नहीं"}
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="label">
+                                🗺️ State:
+                            </div>
+
+                            ${location.state || "उपलब्ध नहीं"}
 
                         </div>
 
@@ -591,3 +624,4 @@
 
 </body>
 </html>
+```
