@@ -172,6 +172,16 @@ Location sharing अभी बंद है।
 </div>
 
 <div class="row">
+    <div class="label">🏙️ City</div>
+    <div id="city">पता लगाया जा रहा है...</div>
+</div>
+
+<div class="row">
+    <div class="label">🗺️ State</div>
+    <div id="state">पता लगाया जा रहा है...</div>
+</div>
+
+<div class="row">
     <div class="label">🎯 Accuracy</div>
     <div id="accuracy"></div>
 </div>
@@ -241,6 +251,12 @@ document.getElementById("latitude");
 
 const longitudeEl =
 document.getElementById("longitude");
+
+const cityEl =
+document.getElementById("city");
+
+const stateEl =
+document.getElementById("state");
 
 const accuracyEl =
 document.getElementById("accuracy");
@@ -346,6 +362,85 @@ function showServerError(message) {
 
 
 /* =====================================================
+   REVERSE GEOCODING
+   LATITUDE + LONGITUDE → CITY + STATE
+===================================================== */
+
+async function getCityState(latitude, longitude) {
+
+    try {
+
+        const url =
+        "https://api.bigdatacloud.net/data/reverse-geocode-client" +
+        "?latitude=" +
+        encodeURIComponent(latitude) +
+        "&longitude=" +
+        encodeURIComponent(longitude) +
+        "&localityLanguage=en";
+
+
+        const response =
+        await fetch(url);
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "City/State service HTTP " +
+                response.status
+            );
+        }
+
+
+        const data =
+        await response.json();
+
+
+        const city =
+        data.city ||
+        data.locality ||
+        "";
+
+
+        const state =
+        data.principalSubdivision ||
+        "";
+
+
+        return {
+
+            city: city,
+
+            state: state
+
+        };
+
+
+    } catch (error) {
+
+        console.warn(
+            "City/State detection failed:",
+            error
+        );
+
+
+        /* -------------------------------------------
+           IMPORTANT:
+           Geocoding fail होने पर भी GPS भेजना है.
+        ------------------------------------------- */
+
+        return {
+
+            city: "",
+
+            state: ""
+
+        };
+    }
+}
+
+
+/* =====================================================
    SEND LOCATION TO SUPABASE
 ===================================================== */
 
@@ -393,12 +488,18 @@ async function sendLocation(position) {
     Math.round(accuracy) +
     " मीटर";
 
+    cityEl.textContent =
+    "पता लगाया जा रहा है...";
+
+    stateEl.textContent =
+    "पता लगाया जा रहा है...";
+
     infoBox.style.display =
     "block";
 
 
     statusBox.textContent =
-    "🟡 Location server पर भेजी जा रही है...";
+    "🟡 Location और City/State पता किए जा रहे हैं...";
 
 
     successBox.style.display =
@@ -425,6 +526,35 @@ async function sendLocation(position) {
     try {
 
         /* -------------------------------------------
+           Get City + State
+        ------------------------------------------- */
+
+        const locationInfo =
+        await getCityState(
+            latitude,
+            longitude
+        );
+
+
+        const city =
+        locationInfo.city || "";
+
+        const state =
+        locationInfo.state || "";
+
+
+        /* -------------------------------------------
+           Show City + State on phone
+        ------------------------------------------- */
+
+        cityEl.textContent =
+        city || "उपलब्ध नहीं";
+
+        stateEl.textContent =
+        state || "उपलब्ध नहीं";
+
+
+        /* -------------------------------------------
            Data to insert
         ------------------------------------------- */
 
@@ -441,6 +571,12 @@ async function sendLocation(position) {
 
             accuracy:
             accuracy,
+
+            city:
+            city || null,
+
+            state:
+            state || null,
 
             created_at:
             new Date().toISOString()
@@ -584,7 +720,7 @@ async function sendLocation(position) {
 
 
         successBox.textContent =
-        "✅ Server ने location स्वीकार कर ली।";
+        "✅ Location + City + State server पर save हो गए।";
 
 
         errorBox.style.display =
