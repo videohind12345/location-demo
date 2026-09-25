@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -30,7 +31,7 @@
         }
 
         .card {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -42,8 +43,8 @@
         }
 
         .row {
-            padding: 9px 0;
-            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            border-bottom: 1px solid #eeeeee;
             word-break: break-word;
         }
 
@@ -53,7 +54,7 @@
 
         .label {
             font-weight: bold;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
 
         .good {
@@ -73,7 +74,7 @@
 
         .history-item {
             background: #fafafa;
-            border: 1px solid #ddd;
+            border: 1px solid #dddddd;
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 12px;
@@ -87,7 +88,7 @@
 
         .map-btn {
             display: inline-block;
-            margin-top: 10px;
+            margin-top: 12px;
             padding: 10px 14px;
             background: #1976d2;
             color: white;
@@ -109,6 +110,7 @@
         .loading {
             text-align: center;
             color: #666;
+            padding: 15px;
         }
 
         .empty {
@@ -120,7 +122,7 @@
         .error {
             background: #ffe5e5;
             color: #b00020;
-            padding: 12px;
+            padding: 14px;
             border-radius: 8px;
             margin-bottom: 15px;
             word-break: break-word;
@@ -131,6 +133,13 @@
             font-size: 13px;
             color: #666;
             margin-top: 10px;
+        }
+
+        .time-info {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
         }
     </style>
 </head>
@@ -147,33 +156,47 @@
 
     <div id="errorBox"></div>
 
-    <!-- LATEST LOCATION -->
+
+    <!-- =========================================
+         LATEST LOCATION
+    ========================================== -->
+
     <div class="card">
 
         <h2>📍 Latest Location</h2>
 
         <div id="latestContent">
+
             <div class="loading">
                 Location loading...
             </div>
+
         </div>
 
     </div>
 
 
-    <!-- LOCATION HISTORY -->
+    <!-- =========================================
+         LOCATION HISTORY
+    ========================================== -->
+
     <div class="card">
 
         <h2>🕘 Location History</h2>
 
         <div id="historyContent">
+
             <div class="loading">
                 History loading...
             </div>
+
         </div>
 
         <div class="refresh-info">
             🔄 Automatically refreshes every 5 seconds
+        </div>
+
+        <div id="lastRefresh" class="time-info">
         </div>
 
     </div>
@@ -183,307 +206,409 @@
 
 <script>
 
-    // ============================================
-    // SUPABASE SETTINGS
-    // ============================================
+/* ==================================================
+   SUPABASE SETTINGS
+================================================== */
 
-    const SUPABASE_URL =
-        "https://qtfnupdojsqpuywhoryu.supabase.co";
+const SUPABASE_URL =
+    "https://qtfnupdojsqpuywhoryu.supabase.co";
 
-    const SUPABASE_KEY =
-        "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
-
-
-    // ============================================
-    // DOM ELEMENTS
-    // ============================================
-
-    const latestContent =
-        document.getElementById("latestContent");
-
-    const historyContent =
-        document.getElementById("historyContent");
-
-    const statusBox =
-        document.getElementById("status");
-
-    const errorBox =
-        document.getElementById("errorBox");
+const SUPABASE_KEY =
+    "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-    // ============================================
-    // FORMAT TIME
-    // ============================================
+/* ==================================================
+   DOM ELEMENTS
+================================================== */
 
-    function formatTime(dateString) {
+const latestContent =
+    document.getElementById("latestContent");
 
-        if (!dateString) {
-            return "Unknown";
-        }
+const historyContent =
+    document.getElementById("historyContent");
 
-        const date = new Date(dateString);
+const statusBox =
+    document.getElementById("status");
 
-        if (isNaN(date.getTime())) {
-            return dateString;
-        }
+const errorBox =
+    document.getElementById("errorBox");
 
-        return date.toLocaleString("en-IN", {
+const lastRefresh =
+    document.getElementById("lastRefresh");
+
+
+/* ==================================================
+   FORMAT DATE / TIME
+================================================== */
+
+function formatTime(dateString) {
+
+    if (!dateString) {
+        return "Unknown";
+    }
+
+    const date =
+        new Date(dateString);
+
+    if (isNaN(date.getTime())) {
+        return dateString;
+    }
+
+    return date.toLocaleString(
+        "en-IN",
+        {
             dateStyle: "medium",
             timeStyle: "medium"
-        });
+        }
+    );
+}
+
+
+/* ==================================================
+   ACCURACY COLOR
+================================================== */
+
+function accuracyClass(accuracy) {
+
+    const value =
+        Number(accuracy);
+
+    if (!Number.isFinite(value)) {
+        return "";
+    }
+
+    if (value <= 20) {
+        return "good";
+    }
+
+    if (value <= 100) {
+        return "medium";
+    }
+
+    return "poor";
+}
+
+
+/* ==================================================
+   GOOGLE MAPS LINK
+================================================== */
+
+function mapLink(latitude, longitude) {
+
+    const lat =
+        Number(latitude);
+
+    const lon =
+        Number(longitude);
+
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon)
+    ) {
+
+        return "";
+
     }
 
 
-    // ============================================
-    // ACCURACY CLASS
-    // ============================================
-
-    function accuracyClass(accuracy) {
-
-        const value = Number(accuracy);
-
-        if (!Number.isFinite(value)) {
-            return "";
-        }
-
-        if (value <= 20) {
-            return "good";
-        }
-
-        if (value <= 100) {
-            return "medium";
-        }
-
-        return "poor";
-    }
+    const url =
+        "https://www.google.com/maps?q=" +
+        encodeURIComponent(
+            lat + "," + lon
+        );
 
 
-    // ============================================
-    // GOOGLE MAPS LINK
-    // ============================================
+    return `
+        <a
+            class="map-btn"
+            href="${url}"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            🗺️ Open in Google Maps
+        </a>
+    `;
+}
 
-    function mapLink(latitude, longitude) {
 
-        const lat = Number(latitude);
-        const lon = Number(longitude);
+/* ==================================================
+   LOAD LOCATIONS
+================================================== */
 
-        if (!Number.isFinite(lat) ||
-            !Number.isFinite(lon)) {
+async function loadLocations() {
 
-            return "";
-        }
+    errorBox.innerHTML = "";
+
+    statusBox.innerHTML =
+        "🔄 Loading latest location...";
+
+
+    try {
+
+        /* ------------------------------------------
+           SUPABASE REST API URL
+        ------------------------------------------ */
 
         const url =
-            "https://www.google.com/maps?q=" +
-            encodeURIComponent(lat + "," + lon);
-
-        return `
-            <a
-                class="map-btn"
-                href="${url}"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                🗺️ Open in Google Maps
-            </a>
-        `;
-    }
+            SUPABASE_URL +
+            "/rest/v1/locations" +
+            "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
+            "&order=created_at.desc" +
+            "&limit=100";
 
 
-    // ============================================
-    // LOAD LOCATIONS FROM SUPABASE
-    // ============================================
+        /* ------------------------------------------
+           FETCH DATA
+        ------------------------------------------ */
 
-    async function loadLocations() {
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
 
-        errorBox.innerHTML = "";
-
-        statusBox.innerHTML =
-            "🔄 Loading latest location...";
-
-        try {
-
-            const url =
-                SUPABASE_URL +
-                "/rest/v1/locations" +
-                "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
-                "&order=created_at.desc" +
-                "&limit=100";
-
-
-            const response = await fetch(url, {
-
-                method: "GET",
-
-                headers: {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization":
-                        "Bearer " + SUPABASE_KEY
+                    headers: {
+                        "apikey":
+                            SUPABASE_KEY
+                    }
                 }
-
-            });
-
-
-            // ====================================
-            // CHECK RESPONSE
-            // ====================================
-
-            if (!response.ok) {
-
-                const errorText =
-                    await response.text();
-
-                throw new Error(
-                    "Supabase Error: " +
-                    response.status +
-                    " - " +
-                    errorText
-                );
-            }
-
-
-            const data =
-                await response.json();
-
-
-            // ====================================
-            // NO DATA
-            // ====================================
-
-            if (!Array.isArray(data) ||
-                data.length === 0) {
-
-                latestContent.innerHTML = `
-                    <div class="empty">
-                        📭 अभी कोई location data नहीं मिला।
-                    </div>
-                `;
-
-                historyContent.innerHTML = `
-                    <div class="empty">
-                        Location History खाली है।
-                    </div>
-                `;
-
-                statusBox.innerHTML =
-                    "⚠️ No location data found";
-
-                return;
-            }
-
-
-            // ====================================
-            // LATEST LOCATION
-            // ====================================
-
-            const latest = data[0];
-
-            const latestAccuracy =
-                Number(latest.accuracy);
-
-
-            latestContent.innerHTML = "";
-
-
-            latestContent.insertAdjacentHTML(
-                "beforeend",
-                `
-                <div class="row">
-                    <div class="label">
-                        📱 Device:
-                    </div>
-                    ${latest.device_id || "Unknown"}
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🏙️ City:
-                    </div>
-                    ${latest.city || "उपलब्ध नहीं"}
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🗺️ State:
-                    </div>
-                    ${latest.state || "उपलब्ध नहीं"}
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🌐 Latitude:
-                    </div>
-                    ${latest.latitude}
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🌐 Longitude:
-                    </div>
-                    ${latest.longitude}
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🎯 Accuracy:
-                    </div>
-
-                    <span class="${accuracyClass(latestAccuracy)}">
-
-                        ${
-                            Number.isFinite(latestAccuracy)
-                            ? Math.round(latestAccuracy) + " मीटर"
-                            : latest.accuracy
-                        }
-
-                    </span>
-                </div>
-
-                <div class="row">
-                    <div class="label">
-                        🕐 Created At:
-                    </div>
-
-                    ${formatTime(latest.created_at)}
-                </div>
-
-                ${mapLink(
-                    latest.latitude,
-                    latest.longitude
-                )}
-                `
             );
 
 
-            // ====================================
-            // LOCATION HISTORY
-            // ====================================
+        /* ------------------------------------------
+           GET RESPONSE TEXT
+        ------------------------------------------ */
 
-            historyContent.innerHTML = "";
+        const responseText =
+            await response.text();
 
 
-            data.forEach((location, index) => {
+        /* ------------------------------------------
+           CHECK HTTP ERROR
+        ------------------------------------------ */
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Supabase Error " +
+                response.status +
+                ": " +
+                responseText
+            );
+
+        }
+
+
+        /* ------------------------------------------
+           CONVERT JSON
+        ------------------------------------------ */
+
+        let data;
+
+
+        try {
+
+            data =
+                JSON.parse(
+                    responseText
+                );
+
+        }
+        catch (jsonError) {
+
+            throw new Error(
+                "Invalid JSON response: " +
+                responseText
+            );
+
+        }
+
+
+        /* ------------------------------------------
+           CHECK DATA
+        ------------------------------------------ */
+
+        if (
+            !Array.isArray(data) ||
+            data.length === 0
+        ) {
+
+            latestContent.innerHTML = `
+                <div class="empty">
+                    📭 अभी कोई location data नहीं मिला।
+                </div>
+            `;
+
+
+            historyContent.innerHTML = `
+                <div class="empty">
+                    Location History खाली है।
+                </div>
+            `;
+
+
+            statusBox.innerHTML =
+                "⚠️ No location data found";
+
+
+            return;
+        }
+
+
+        /* ==================================================
+           LATEST LOCATION
+        ================================================== */
+
+        const latest =
+            data[0];
+
+
+        const latestAccuracy =
+            Number(
+                latest.accuracy
+            );
+
+
+        latestContent.innerHTML = `
+
+            <div class="row">
+
+                <div class="label">
+                    📱 Device ID:
+                </div>
+
+                ${latest.device_id || "Unknown"}
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🏙️ City:
+                </div>
+
+                ${latest.city || "उपलब्ध नहीं"}
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🗺️ State:
+                </div>
+
+                ${latest.state || "उपलब्ध नहीं"}
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🌐 Latitude:
+                </div>
+
+                ${latest.latitude}
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🌐 Longitude:
+                </div>
+
+                ${latest.longitude}
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🎯 Accuracy:
+                </div>
+
+                <span class="${accuracyClass(latestAccuracy)}">
+
+                    ${
+                        Number.isFinite(
+                            latestAccuracy
+                        )
+                        ? Math.round(
+                            latestAccuracy
+                        ) + " मीटर"
+                        : latest.accuracy
+                    }
+
+                </span>
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="label">
+                    🕐 Created At:
+                </div>
+
+                ${formatTime(
+                    latest.created_at
+                )}
+
+            </div>
+
+
+            ${mapLink(
+                latest.latitude,
+                latest.longitude
+            )}
+
+        `;
+
+
+        /* ==================================================
+           LOCATION HISTORY
+        ================================================== */
+
+        historyContent.innerHTML = "";
+
+
+        data.forEach(
+            (location, index) => {
 
                 const accuracy =
-                    Number(location.accuracy);
+                    Number(
+                        location.accuracy
+                    );
 
 
                 historyContent.insertAdjacentHTML(
                     "beforeend",
+
                     `
+
                     <div class="history-item">
 
                         <div class="history-number">
                             #${index + 1}
                         </div>
 
+
                         <div class="row">
 
                             <div class="label">
-                                📱 Device:
+                                📱 Device ID:
                             </div>
 
-                            ${location.device_id || "Unknown"}
+                            ${
+                                location.device_id ||
+                                "Unknown"
+                            }
 
                         </div>
 
@@ -494,7 +619,10 @@
                                 🏙️ City:
                             </div>
 
-                            ${location.city || "उपलब्ध नहीं"}
+                            ${
+                                location.city ||
+                                "उपलब्ध नहीं"
+                            }
 
                         </div>
 
@@ -505,7 +633,10 @@
                                 🗺️ State:
                             </div>
 
-                            ${location.state || "उपलब्ध नहीं"}
+                            ${
+                                location.state ||
+                                "उपलब्ध नहीं"
+                            }
 
                         </div>
 
@@ -516,7 +647,9 @@
                                 🌐 Latitude:
                             </div>
 
-                            ${location.latitude}
+                            ${
+                                location.latitude
+                            }
 
                         </div>
 
@@ -527,7 +660,9 @@
                                 🌐 Longitude:
                             </div>
 
-                            ${location.longitude}
+                            ${
+                                location.longitude
+                            }
 
                         </div>
 
@@ -538,11 +673,19 @@
                                 🎯 Accuracy:
                             </div>
 
-                            <span class="${accuracyClass(accuracy)}">
+                            <span
+                                class="${accuracyClass(
+                                    accuracy
+                                )}"
+                            >
 
                                 ${
-                                    Number.isFinite(accuracy)
-                                    ? Math.round(accuracy) + " मीटर"
+                                    Number.isFinite(
+                                        accuracy
+                                    )
+                                    ? Math.round(
+                                        accuracy
+                                    ) + " मीटर"
                                     : location.accuracy
                                 }
 
@@ -557,69 +700,94 @@
                                 🕐 Time:
                             </div>
 
-                            ${formatTime(location.created_at)}
+                            ${
+                                formatTime(
+                                    location.created_at
+                                )
+                            }
 
                         </div>
 
 
-                        ${mapLink(
-                            location.latitude,
-                            location.longitude
-                        )}
+                        ${
+                            mapLink(
+                                location.latitude,
+                                location.longitude
+                            )
+                        }
 
                     </div>
+
                     `
                 );
 
-            });
+            }
+        );
 
 
-            // ====================================
-            // SUCCESS STATUS
-            // ====================================
+        /* ==================================================
+           SUCCESS
+        ================================================== */
 
-            statusBox.innerHTML =
-                "🟢 Location Connected • " +
-                data.length +
-                " records found";
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            statusBox.innerHTML =
-                "🔴 Location data load failed";
+        statusBox.innerHTML =
+            "🟢 Location Connected • " +
+            data.length +
+            " records found";
 
 
-            errorBox.innerHTML = `
-                <div class="error">
-                    ❌ ${error.message}
-                </div>
-            `;
+        lastRefresh.innerHTML =
+            "Last refresh: " +
+            formatTime(
+                new Date().toISOString()
+            );
 
-        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "LOCATION ERROR:",
+            error
+        );
+
+
+        statusBox.innerHTML =
+            "🔴 Location data load failed";
+
+
+        errorBox.innerHTML = `
+
+            <div class="error">
+
+                ❌ ${error.message}
+
+            </div>
+
+        `;
 
     }
 
-
-    // ============================================
-    // FIRST LOAD
-    // ============================================
-
-    loadLocations();
+}
 
 
-    // ============================================
-    // AUTO REFRESH EVERY 5 SECONDS
-    // ============================================
+/* ==================================================
+   FIRST LOAD
+================================================== */
 
-    setInterval(
-        loadLocations,
-        5000
-    );
+loadLocations();
+
+
+/* ==================================================
+   AUTO REFRESH EVERY 5 SECONDS
+================================================== */
+
+setInterval(
+    loadLocations,
+    5000
+);
 
 </script>
 
 </body>
 </html>
+
