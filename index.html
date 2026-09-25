@@ -3,96 +3,311 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Madam Live Location Searching</title>
 
 <style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #222;
+}
+
+.container {
+    max-width: 650px;
+    margin: auto;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 15px;
+    font-size: 25px;
+}
+
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.start {
+    background: #16a34a;
+    color: white;
+}
+
+.stop {
+    background: #dc2626;
+    color: white;
+}
+
+.refresh {
+    background: #2563eb;
+    color: white;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.status-box {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    text-align: center;
+}
+
+.status {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.status.green {
+    color: #15803d;
+}
+
+.status.orange {
+    color: #c2410c;
+}
+
+.status.red {
+    color: #dc2626;
+}
+
+/* =========================
+   LOCATION CARD
+========================= */
+
+.location-card {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.location-card h2 {
+    margin-top: 0;
+    font-size: 21px;
+}
+
+.info-row {
+    margin: 13px 0;
+    line-height: 1.5;
+}
+
+.label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 3px;
+}
+
+.value {
+    font-size: 16px;
+    word-break: break-word;
+}
+
+.accuracy {
+    font-weight: bold;
+    color: #15803d;
+}
+
+/* =========================
+   MAP BUTTON
+========================= */
+
+.map-button {
+    display: block;
+    text-align: center;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+    padding: 13px;
+    border-radius: 8px;
+    font-weight: bold;
+    margin-top: 18px;
+}
+
+/* =========================
+   HISTORY
+========================= */
+
+.history-title {
+    font-size: 22px;
+    margin: 20px 0 12px;
+}
+
+.history-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.history-number {
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.history-row {
+    margin: 6px 0;
+    word-break: break-word;
+}
+
+.history-map {
+    display: inline-block;
+    margin-top: 10px;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
     body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        margin: 0;
-        padding: 20px;
-        text-align: center;
+        padding: 10px;
     }
 
-    .box {
-        max-width: 500px;
-        margin: auto;
-        background: white;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    .header h1 {
+        font-size: 22px;
     }
 
-    h2 {
-        margin-top: 0;
+    .location-card {
+        padding: 16px;
     }
 
-    button {
-        padding: 13px 22px;
-        margin: 8px;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-    }
+}
 
-    #startBtn {
-        background: #16a34a;
-        color: white;
-    }
-
-    #stopBtn {
-        background: #dc2626;
-        color: white;
-    }
-
-    #status {
-        margin-top: 20px;
-        padding: 15px;
-        background: #f1f5f9;
-        border-radius: 10px;
-        text-align: left;
-        line-height: 1.7;
-        word-break: break-word;
-    }
-
-    .good {
-        color: #15803d;
-        font-weight: bold;
-    }
-
-    .wait {
-        color: #ca8a04;
-        font-weight: bold;
-    }
-
-    .error {
-        color: #dc2626;
-        font-weight: bold;
-    }
 </style>
 </head>
 
+
 <body>
 
-<div class="box">
+<div class="container">
 
-    <h2>📍 Madam Live Location</h2>
 
-    <button id="startBtn">▶ Start Location</button>
-    <button id="stopBtn">⏹ Stop</button>
+<!-- =========================
+     HEADER
+========================= -->
 
-    <div id="status">
-        Location tracking बंद है.
+<div class="header">
+
+    <h1>📍 Madam Live Location Searching</h1>
+
+    <button
+        class="start"
+        onclick="startTracking()">
+        ▶ Start Location
+    </button>
+
+    <button
+        class="stop"
+        onclick="stopTracking()">
+        ⏹ Stop
+    </button>
+
+    <button
+        class="refresh"
+        onclick="loadLocations()">
+        🔄 Refresh
+    </button>
+
+</div>
+
+
+<!-- =========================
+     STATUS
+========================= -->
+
+<div class="status-box">
+
+    <div
+        id="status"
+        class="status orange">
+
+        📡 Location tracking बंद है.
+
     </div>
 
 </div>
 
+
+<!-- =========================
+     LATEST LOCATION
+========================= -->
+
+<div id="latestLocation"></div>
+
+
+<!-- =========================
+     HISTORY
+========================= -->
+
+<div class="history-title">
+    🕘 Location History
+</div>
+
+<div id="history">
+
+    <div class="loading">
+        Location History loading...
+    </div>
+
+</div>
+
+
+</div>
+
+
 <script>
 
-/* ==============================
+/* =====================================================
    SUPABASE CONFIG
-================================ */
+===================================================== */
 
 const SUPABASE_URL =
 "https://qtfnupdojsqpuywhoryu.supabase.co";
@@ -101,129 +316,203 @@ const SUPABASE_KEY =
 "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* ==============================
+/* =====================================================
    DEVICE ID
-================================ */
+===================================================== */
 
-let deviceId = localStorage.getItem("device_id");
+let deviceId =
+localStorage.getItem("device_id");
 
 if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem("device_id", deviceId);
+
+    deviceId =
+        crypto.randomUUID();
+
+    localStorage.setItem(
+        "device_id",
+        deviceId
+    );
 }
 
 
-/* ==============================
-   VARIABLES
-================================ */
+/* =====================================================
+   GPS VARIABLES
+===================================================== */
 
 let watchId = null;
+
 let tracking = false;
 
 let firstLocationSaved = false;
 
 let bestAccuracy = Infinity;
+
 let lastSavedAccuracy = Infinity;
 
 let lastLatitude = null;
+
 let lastLongitude = null;
+
 let lastSavedTime = 0;
 
 
-/* ==============================
-   HTML ELEMENTS
-================================ */
+/* =====================================================
+   STATUS
+===================================================== */
 
-const statusBox = document.getElementById("status");
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
+function setStatus(
+    message,
+    type = "orange"
+) {
 
+    const box =
+        document.getElementById("status");
 
-/* ==============================
-   STATUS FUNCTION
-================================ */
+    box.innerHTML = message;
 
-function showStatus(message, type = "") {
-
-    statusBox.className = type;
-
-    statusBox.innerHTML = message;
+    box.className =
+        "status " + type;
 }
 
 
-/* ==============================
-   DISTANCE CALCULATION
-================================ */
+/* =====================================================
+   DISTANCE
+===================================================== */
 
-function distanceInMeters(lat1, lon1, lat2, lon2) {
+function distanceInMeters(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
 
     const R = 6371000;
 
-    const p1 = lat1 * Math.PI / 180;
-    const p2 = lat2 * Math.PI / 180;
+    const p1 =
+        lat1 * Math.PI / 180;
 
-    const dp = (lat2 - lat1) * Math.PI / 180;
-    const dl = (lon2 - lon1) * Math.PI / 180;
+    const p2 =
+        lat2 * Math.PI / 180;
+
+    const dp =
+        (lat2 - lat1) *
+        Math.PI / 180;
+
+    const dl =
+        (lon2 - lon1) *
+        Math.PI / 180;
 
     const a =
-        Math.sin(dp / 2) * Math.sin(dp / 2) +
+        Math.sin(dp / 2) *
+        Math.sin(dp / 2) +
+
         Math.cos(p1) *
         Math.cos(p2) *
+
         Math.sin(dl / 2) *
         Math.sin(dl / 2);
 
-    const c = 2 * Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1 - a)
-    );
+    const c =
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
 
     return R * c;
 }
 
 
-/* ==============================
-   REVERSE GEOCODING
-================================ */
+/* =====================================================
+   DATE FORMAT
+===================================================== */
 
-async function getCityState(latitude, longitude) {
+function formatDate(dateString) {
+
+    if (!dateString) {
+        return "-";
+    }
+
+    const date =
+        new Date(dateString);
+
+    return date.toLocaleString(
+        "en-IN",
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true
+        }
+    );
+}
+
+
+/* =====================================================
+   REVERSE GEOCODING
+===================================================== */
+
+async function getCityState(
+    latitude,
+    longitude
+) {
 
     try {
 
         const url =
-            "https://api.bigdatacloud.net/data/reverse-geocode-client" +
-            "?latitude=" + latitude +
-            "&longitude=" + longitude +
+            "https://api.bigdatacloud.net/data/" +
+            "reverse-geocode-client" +
+            "?latitude=" +
+            latitude +
+            "&longitude=" +
+            longitude +
             "&localityLanguage=en";
 
-        const response = await fetch(url);
+
+        const response =
+            await fetch(url);
+
 
         if (!response.ok) {
+
             return {
                 city: "",
                 state: ""
             };
+
         }
 
-        const data = await response.json();
 
-        let city =
+        const data =
+            await response.json();
+
+
+        const city =
             data.city ||
             data.locality ||
+            "";
+
+
+        const state =
             data.principalSubdivision ||
             "";
 
-        let state =
-            data.principalSubdivision ||
-            "";
 
         return {
             city: city,
             state: state
         };
 
+
     } catch (error) {
 
-        console.log("Reverse geocode error:", error);
+        console.log(
+            "Reverse geocode error:",
+            error
+        );
 
         return {
             city: "",
@@ -233,9 +522,9 @@ async function getCityState(latitude, longitude) {
 }
 
 
-/* ==============================
+/* =====================================================
    SAVE LOCATION
-================================ */
+===================================================== */
 
 async function saveLocation(
     latitude,
@@ -245,61 +534,72 @@ async function saveLocation(
 
     try {
 
-        showStatus(`
-            📡 GPS Location मिली<br><br>
-
-            Latitude: ${latitude}<br>
-            Longitude: ${longitude}<br>
-            🎯 Accuracy: ${accuracy.toFixed(1)} m<br><br>
-
-            ⏳ Location save हो रही है...
-        `);
+        setStatus(
+            "📡 Location मिली — save हो रही है...",
+            "orange"
+        );
 
 
-        /* Get city/state */
+        /* City / State */
 
         const locationInfo =
-            await getCityState(latitude, longitude);
+            await getCityState(
+                latitude,
+                longitude
+            );
 
 
         const payload = {
 
-            device_id: deviceId,
+            device_id:
+                deviceId,
 
-            latitude: latitude,
+            latitude:
+                latitude,
 
-            longitude: longitude,
+            longitude:
+                longitude,
 
-            accuracy: accuracy,
+            accuracy:
+                accuracy,
 
-            city: locationInfo.city,
+            city:
+                locationInfo.city,
 
-            state: locationInfo.state
+            state:
+                locationInfo.state
         };
 
 
-        const response = await fetch(
-            SUPABASE_URL + "/rest/v1/locations",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                SUPABASE_URL +
+                "/rest/v1/locations",
+                {
 
-                headers: {
+                    method: "POST",
 
-                    "apikey": SUPABASE_KEY,
+                    headers: {
 
-                    "Content-Type":
-                        "application/json",
+                        "apikey":
+                            SUPABASE_KEY,
 
-                    "Accept":
-                        "application/json",
+                        "Content-Type":
+                            "application/json",
 
-                    "Prefer":
-                        "return=minimal"
-                },
+                        "Accept":
+                            "application/json",
 
-                body: JSON.stringify(payload)
-            }
-        );
+                        "Prefer":
+                            "return=minimal"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            payload
+                        )
+                }
+            );
 
 
         if (!response.ok) {
@@ -315,71 +615,50 @@ async function saveLocation(
         }
 
 
-        /* Remember saved information */
-
-        lastSavedAccuracy = accuracy;
-
-        lastLatitude = latitude;
-
-        lastLongitude = longitude;
-
-        lastSavedTime = Date.now();
+        /* Remember last saved location */
 
         firstLocationSaved = true;
 
+        lastSavedAccuracy =
+            accuracy;
 
-        showStatus(`
+        lastLatitude =
+            latitude;
 
-            <span class="good">
-            ✅ LOCATION SAVED
-            </span>
+        lastLongitude =
+            longitude;
 
-            <br><br>
+        lastSavedTime =
+            Date.now();
 
-            📍 Latitude:
-            ${latitude}<br>
 
-            📍 Longitude:
-            ${longitude}<br>
+        setStatus(
+            "✅ Location successfully saved",
+            "green"
+        );
 
-            🎯 Accuracy:
-            <b>${accuracy.toFixed(1)} m</b><br>
 
-            🏙️ City:
-            ${locationInfo.city || "Unknown"}<br>
+        /* Refresh history */
 
-            🗺️ State:
-            ${locationInfo.state || "Unknown"}<br><br>
-
-            📱 Device ID:<br>
-            ${deviceId}<br><br>
-
-            🟢 GPS tracking चालू है...
-        `);
+        loadLocations();
 
 
     } catch (error) {
 
         console.error(error);
 
-        showStatus(`
-
-            <span class="error">
-            ❌ Location Save Error
-            </span>
-
-            <br><br>
-
-            ${error.message}
-
-        `);
+        setStatus(
+            "❌ Location Save Error: " +
+            error.message,
+            "red"
+        );
     }
 }
 
 
-/* ==============================
+/* =====================================================
    GPS SUCCESS
-================================ */
+===================================================== */
 
 function gpsSuccess(position) {
 
@@ -393,11 +672,15 @@ function gpsSuccess(position) {
         position.coords.accuracy;
 
 
-    /* Update best accuracy */
+    /* Best accuracy */
 
-    if (accuracy < bestAccuracy) {
+    if (
+        accuracy <
+        bestAccuracy
+    ) {
 
-        bestAccuracy = accuracy;
+        bestAccuracy =
+            accuracy;
     }
 
 
@@ -410,10 +693,11 @@ function gpsSuccess(position) {
     );
 
 
-    /* =====================================
-       FIRST LOCATION
+    /* =================================================
+       FIRST READING
+
        तुरंत save होगी
-    ====================================== */
+    ================================================= */
 
     if (!firstLocationSaved) {
 
@@ -427,19 +711,22 @@ function gpsSuccess(position) {
     }
 
 
-    /* =====================================
-       AFTER FIRST LOCATION
-
-       Better accuracy होने पर save करें
-    ====================================== */
+    /* =================================================
+       ACCURACY IMPROVED
+    ================================================= */
 
     const accuracyImproved =
-        accuracy < lastSavedAccuracy;
+        accuracy <
+        lastSavedAccuracy;
 
 
-    /* Position changed */
+    /* =================================================
+       MOVEMENT
+    ================================================= */
 
-    let moved = false;
+    let moved =
+        false;
+
 
     if (
         lastLatitude !== null &&
@@ -454,22 +741,29 @@ function gpsSuccess(position) {
                 longitude
             );
 
-        moved = distance >= 20;
+
+        if (
+            distance >= 20
+        ) {
+
+            moved = true;
+        }
     }
 
 
-    /* Save conditions
-
-       1. Accuracy बेहतर हुई
-       OR
-       2. Phone कम से कम 20m move हुआ
-       OR
-       3. 30 seconds हो गए
-    */
+    /* =================================================
+       30 SECOND UPDATE
+    ================================================= */
 
     const thirtySecondsPassed =
-        Date.now() - lastSavedTime >= 30000;
+        Date.now() -
+        lastSavedTime >=
+        30000;
 
+
+    /* =================================================
+       SAVE CONDITION
+    ================================================= */
 
     if (
         accuracyImproved ||
@@ -485,97 +779,99 @@ function gpsSuccess(position) {
 
     } else {
 
-        showStatus(`
-
-            📡 GPS tracking चालू है...<br><br>
-
-            Latitude:
-            ${latitude}<br>
-
-            Longitude:
-            ${longitude}<br>
-
-            🎯 Current Accuracy:
-            <b>${accuracy.toFixed(1)} m</b><br>
-
-            🏆 Best Accuracy:
-            <b>${bestAccuracy.toFixed(1)} m</b><br><br>
-
-            🟢 Location लगातार track हो रही है...
-        `);
+        setStatus(
+            "🟢 GPS tracking चालू है — " +
+            "Current Accuracy: " +
+            accuracy.toFixed(1) +
+            " m | Best: " +
+            bestAccuracy.toFixed(1) +
+            " m",
+            "green"
+        );
     }
 }
 
 
-/* ==============================
+/* =====================================================
    GPS ERROR
-================================ */
+===================================================== */
 
 function gpsError(error) {
 
-    console.error(error);
+    console.log(
+        "GPS Error:",
+        error
+    );
 
 
-    let message = "";
+    if (
+        error.code === 1
+    ) {
 
-
-    if (error.code === 1) {
-
-        message =
-            "❌ Location permission denied.<br>" +
-            "Phone में Location Permission Allow करें.";
-
-    }
-
-    else if (error.code === 2) {
-
-        message =
-            "⚠️ GPS Location अभी नहीं मिल रही.<br>" +
-            "GPS/Location ON रखें.";
+        setStatus(
+            "❌ Location permission denied. " +
+            "Phone में Location Permission Allow करें.",
+            "red"
+        );
 
     }
 
-    else if (error.code === 3) {
+    else if (
+        error.code === 2
+    ) {
 
-        message =
-            "⚠️ GPS Timeout.<br>" +
-            "फिर से GPS signal लेने की कोशिश हो रही है...";
+        setStatus(
+            "⚠️ GPS location अभी नहीं मिल रही. " +
+            "Location/GPS ON रखें.",
+            "orange"
+        );
+
+    }
+
+    else if (
+        error.code === 3
+    ) {
+
+        setStatus(
+            "⚠️ GPS timeout — फिर से location लेने की कोशिश हो रही है...",
+            "orange"
+        );
 
     }
 
     else {
 
-        message =
+        setStatus(
             "❌ GPS Error: " +
-            error.message;
+            error.message,
+            "red"
+        );
     }
-
-
-    showStatus(
-        message,
-        "error"
-    );
 }
 
 
-/* ==============================
+/* =====================================================
    START TRACKING
-================================ */
+===================================================== */
 
 function startTracking() {
 
-    if (!navigator.geolocation) {
+    if (
+        !navigator.geolocation
+    ) {
 
-        showStatus(
+        setStatus(
             "❌ इस device में GPS/Geolocation supported नहीं है.",
-            "error"
+            "red"
         );
 
         return;
     }
 
 
-    if (tracking) {
+    if (
+        tracking
+    ) {
 
         return;
     }
@@ -583,28 +879,34 @@ function startTracking() {
 
     tracking = true;
 
+
     firstLocationSaved = false;
 
-    bestAccuracy = Infinity;
+    bestAccuracy =
+        Infinity;
 
-    lastSavedAccuracy = Infinity;
+    lastSavedAccuracy =
+        Infinity;
 
-    lastLatitude = null;
+    lastLatitude =
+        null;
 
-    lastLongitude = null;
+    lastLongitude =
+        null;
 
-    lastSavedTime = 0;
-
-
-    showStatus(`
-        📡 GPS signal खोजा जा रहा है...<br><br>
-        कृपया Location Permission Allow रखें.
-    `);
+    lastSavedTime =
+        0;
 
 
-    /* =====================================
-       CONTINUOUS GPS TRACKING
-    ====================================== */
+    setStatus(
+        "📡 GPS signal खोजा जा रहा है...",
+        "orange"
+    );
+
+
+    /* =================================================
+       CONTINUOUS GPS
+    ================================================= */
 
     watchId =
         navigator.geolocation.watchPosition(
@@ -615,59 +917,438 @@ function startTracking() {
 
             {
 
-                enableHighAccuracy: true,
+                enableHighAccuracy:
+                    true,
 
-                maximumAge: 0,
+                maximumAge:
+                    0,
 
-                timeout: 15000
+                timeout:
+                    15000
             }
         );
 }
 
 
-/* ==============================
+/* =====================================================
    STOP TRACKING
-================================ */
+===================================================== */
 
 function stopTracking() {
 
-    if (watchId !== null) {
+    if (
+        watchId !== null
+    ) {
 
         navigator.geolocation.clearWatch(
             watchId
         );
 
-        watchId = null;
+        watchId =
+            null;
     }
 
 
-    tracking = false;
+    tracking =
+        false;
 
 
-    showStatus(`
-        ⏹️ GPS tracking बंद कर दी गई है.
-    `);
+    setStatus(
+        "⏹️ GPS tracking बंद कर दी गई है.",
+        "orange"
+    );
 }
 
 
-/* ==============================
-   BUTTONS
-================================ */
+/* =====================================================
+   LOAD LOCATIONS
+===================================================== */
 
-startBtn.addEventListener(
-    "click",
-    startTracking
+async function loadLocations() {
+
+    try {
+
+        const url =
+            SUPABASE_URL +
+            "/rest/v1/locations" +
+
+            "?select=" +
+            "id,device_id,latitude,longitude," +
+            "accuracy,city,state,created_at" +
+
+            "&order=created_at.desc" +
+
+            "&limit=100";
+
+
+        const response =
+            await fetch(
+                url,
+                {
+
+                    method: "GET",
+
+                    headers: {
+
+                        "apikey":
+                            SUPABASE_KEY,
+
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
+
+            throw new Error(
+                response.status +
+                " " +
+                errorText
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        displayLocations(
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById(
+            "history"
+        ).innerHTML =
+
+            `<div class="history-card">
+                ❌ History Load Error:
+                ${error.message}
+            </div>`;
+    }
+}
+
+
+/* =====================================================
+   DISPLAY LOCATIONS
+===================================================== */
+
+function displayLocations(
+    locations
+) {
+
+    const latestBox =
+        document.getElementById(
+            "latestLocation"
+        );
+
+    const historyBox =
+        document.getElementById(
+            "history"
+        );
+
+
+    if (
+        !locations ||
+        locations.length === 0
+    ) {
+
+        latestBox.innerHTML = "";
+
+        historyBox.innerHTML =
+            `<div class="history-card">
+                अभी कोई location उपलब्ध नहीं है.
+            </div>`;
+
+        return;
+    }
+
+
+    /* =================================================
+       LATEST LOCATION
+    ================================================= */
+
+    const latest =
+        locations[0];
+
+
+    const mapUrl =
+        "https://www.google.com/maps?q=" +
+        encodeURIComponent(
+            latest.latitude +
+            "," +
+            latest.longitude
+        );
+
+
+    latestBox.innerHTML = `
+
+        <div class="location-card">
+
+            <h2>
+                📍 Latest Location
+            </h2>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    📱 Device ID:
+                </span>
+
+                <span class="value">
+                    ${latest.device_id}
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🏙️ City:
+                </span>
+
+                <span class="value">
+                    ${latest.city || "-"}
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🗺️ State:
+                </span>
+
+                <span class="value">
+                    ${latest.state || "-"}
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🌐 Latitude:
+                </span>
+
+                <span class="value">
+                    ${latest.latitude}
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🌐 Longitude:
+                </span>
+
+                <span class="value">
+                    ${latest.longitude}
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🎯 Accuracy:
+                </span>
+
+                <span class="value accuracy">
+                    ${Number(
+                        latest.accuracy
+                    ).toFixed(0)} मीटर
+                </span>
+
+            </div>
+
+
+            <div class="info-row">
+
+                <span class="label">
+                    🕐 Created At:
+                </span>
+
+                <span class="value">
+                    ${formatDate(
+                        latest.created_at
+                    )}
+                </span>
+
+            </div>
+
+
+            <a
+                class="map-button"
+                href="${mapUrl}"
+                target="_blank">
+
+                🗺️ Open in Google Maps
+
+            </a>
+
+        </div>
+
+    `;
+
+
+    /* =================================================
+       LOCATION HISTORY
+    ================================================= */
+
+    let historyHTML = "";
+
+
+    locations.forEach(
+        function(location, index) {
+
+
+            const historyMap =
+                "https://www.google.com/maps?q=" +
+                encodeURIComponent(
+                    location.latitude +
+                    "," +
+                    location.longitude
+                );
+
+
+            historyHTML += `
+
+                <div class="history-card">
+
+                    <div class="history-number">
+
+                        #${index + 1}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        📱 <b>Device ID:</b><br>
+
+                        ${location.device_id}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🏙️ <b>City:</b>
+
+                        ${location.city || "-"}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🗺️ <b>State:</b>
+
+                        ${location.state || "-"}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🌐 <b>Latitude:</b>
+
+                        ${location.latitude}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🌐 <b>Longitude:</b>
+
+                        ${location.longitude}
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🎯 <b>Accuracy:</b>
+
+                        <span class="accuracy">
+                            ${Number(
+                                location.accuracy
+                            ).toFixed(0)} मीटर
+                        </span>
+
+                    </div>
+
+
+                    <div class="history-row">
+
+                        🕐 <b>Created At:</b>
+
+                        ${formatDate(
+                            location.created_at
+                        )}
+
+                    </div>
+
+
+                    <a
+                        class="history-map"
+                        href="${historyMap}"
+                        target="_blank">
+
+                        🗺️ Open in Google Maps
+
+                    </a>
+
+                </div>
+
+            `;
+        }
+    );
+
+
+    historyBox.innerHTML =
+        historyHTML;
+}
+
+
+/* =====================================================
+   AUTO REFRESH
+===================================================== */
+
+setInterval(
+    loadLocations,
+    5000
 );
 
-stopBtn.addEventListener(
-    "click",
-    stopTracking
-);
+
+/* =====================================================
+   INITIAL LOAD
+===================================================== */
+
+loadLocations();
 
 
-/* ==============================
-   PAGE LOAD
-================================ */
+/* =====================================================
+   CONSOLE
+===================================================== */
 
 console.log(
     "Device ID:",
