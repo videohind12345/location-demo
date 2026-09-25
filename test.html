@@ -1,0 +1,148 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supabase Test</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f4f6f8;
+}
+
+button {
+    padding: 15px 25px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#result {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🔧 Supabase Connection Test</h2>
+
+<button onclick="testSupabase()">
+    TEST SUPABASE
+</button>
+
+<div id="result">
+Test नहीं हुआ है।
+</div>
+
+<script>
+
+const SUPABASE_URL =
+"https://qtfnupdojsqpuywhoryu.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+
+
+async function testSupabase() {
+
+    const result =
+    document.getElementById("result");
+
+    result.textContent =
+    "⏳ Supabase से connection test हो रहा है...";
+
+
+    try {
+
+        const url =
+        SUPABASE_URL +
+        "/rest/v1/locations" +
+        "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
+        "&order=created_at.desc" +
+        "&limit=5";
+
+
+        console.log("TEST URL:", url);
+
+
+        const response =
+        await fetch(
+            url,
+            {
+                method: "GET",
+
+                headers: {
+                    "apikey":
+                    SUPABASE_KEY
+                }
+            }
+        );
+
+
+        const text =
+        await response.text();
+
+
+        console.log(
+            "HTTP STATUS:",
+            response.status
+        );
+
+        console.log(
+            "RESPONSE:",
+            text
+        );
+
+
+        if (!response.ok) {
+
+            result.textContent =
+                "❌ SUPABASE REACHED\n\n" +
+                "HTTP STATUS: " +
+                response.status +
+                "\n\n" +
+                text;
+
+            return;
+        }
+
+
+        result.textContent =
+            "✅ SUPABASE CONNECTION OK\n\n" +
+            "HTTP STATUS: " +
+            response.status +
+            "\n\n" +
+            "DATA:\n" +
+            text;
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        result.textContent =
+            "❌ BROWSER FETCH FAILED\n\n" +
+            "ERROR:\n" +
+            error.message +
+            "\n\n" +
+            "अगर यहाँ सिर्फ 'Failed to fetch' आता है," +
+            " तो browser request Supabase तक पहुंचने से पहले fail हो रही है।";
+    }
+
+}
+
+</script>
+
+</body>
+</html>
+```
