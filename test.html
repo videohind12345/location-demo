@@ -1,29 +1,32 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supabase Test</title>
+<title>Supabase Connection Test</title>
 
 <style>
 body {
     font-family: Arial, sans-serif;
-    padding: 20px;
-    background: #f4f6f8;
+    padding: 30px;
+    background: #f5f5f5;
 }
 
 button {
     padding: 15px 25px;
     font-size: 18px;
-    font-weight: bold;
+    cursor: pointer;
+    background: green;
+    color: white;
+    border: none;
+    border-radius: 8px;
 }
 
 #result {
     margin-top: 20px;
     padding: 15px;
     background: white;
-    border-radius: 10px;
+    border-radius: 8px;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -34,13 +37,9 @@ button {
 
 <h2>🔧 Supabase Connection Test</h2>
 
-<button onclick="testSupabase()">
-    TEST SUPABASE
-</button>
+<button onclick="testSupabase()">TEST SUPABASE</button>
 
-<div id="result">
-Test नहीं हुआ है।
-</div>
+<div id="result">Test नहीं हुआ है।</div>
 
 <script>
 
@@ -53,96 +52,46 @@ const SUPABASE_KEY =
 
 async function testSupabase() {
 
-    const result =
-    document.getElementById("result");
+    const result = document.getElementById("result");
 
-    result.textContent =
-    "⏳ Supabase से connection test हो रहा है...";
+    result.innerHTML = "⏳ Supabase से connection test हो रहा है...";
 
+    const url =
+        SUPABASE_URL +
+        "/rest/v1/locations" +
+        "?select=*" +
+        "&limit=1";
 
     try {
 
-        const url =
-        SUPABASE_URL +
-        "/rest/v1/locations" +
-        "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
-        "&order=created_at.desc" +
-        "&limit=5";
+        console.log("Testing:", url);
 
+        const response = await fetch(url, {
+            method: "GET",
 
-        console.log("TEST URL:", url);
-
-
-        const response =
-        await fetch(
-            url,
-            {
-                method: "GET",
-
-                headers: {
-                    "apikey":
-                    SUPABASE_KEY
-                }
+            headers: {
+                "apikey": SUPABASE_KEY
             }
-        );
+        });
 
+        const text = await response.text();
 
-        const text =
-        await response.text();
+        result.innerHTML =
+            "✅ SUPABASE REACHED\n\n" +
+            "HTTP STATUS: " + response.status +
+            "\n\nRESPONSE:\n" + text;
 
+    } catch (error) {
 
-        console.log(
-            "HTTP STATUS:",
-            response.status
-        );
-
-        console.log(
-            "RESPONSE:",
-            text
-        );
-
-
-        if (!response.ok) {
-
-            result.textContent =
-                "❌ SUPABASE REACHED\n\n" +
-                "HTTP STATUS: " +
-                response.status +
-                "\n\n" +
-                text;
-
-            return;
-        }
-
-
-        result.textContent =
-            "✅ SUPABASE CONNECTION OK\n\n" +
-            "HTTP STATUS: " +
-            response.status +
-            "\n\n" +
-            "DATA:\n" +
-            text;
-
-    }
-
-    catch (error) {
+        result.innerHTML =
+            "❌ BROWSER FETCH FAILED\n\n" +
+            "ERROR:\n" + error.message;
 
         console.error(error);
-
-
-        result.textContent =
-            "❌ BROWSER FETCH FAILED\n\n" +
-            "ERROR:\n" +
-            error.message +
-            "\n\n" +
-            "अगर यहाँ सिर्फ 'Failed to fetch' आता है," +
-            " तो browser request Supabase तक पहुंचने से पहले fail हो रही है।";
     }
-
 }
 
 </script>
 
 </body>
 </html>
-```
