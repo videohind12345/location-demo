@@ -1,54 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>Madam Live Location Searching</title>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        margin: 0;
-        padding: 20px;
-        text-align: center;
-    }
 
-    h2 {
-        margin-bottom: 20px;
-    }
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
 
-    button {
-        border: none;
-        border-radius: 8px;
-        padding: 14px 25px;
-        margin: 8px;
-        font-size: 17px;
-        cursor: pointer;
-    }
+h2 {
+    margin-bottom: 20px;
+}
 
-    #startBtn {
-        background: #16a34a;
-        color: white;
-    }
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 14px 25px;
+    margin: 8px;
+    font-size: 17px;
+    cursor: pointer;
+}
 
-    #stopBtn {
-        background: #dc2626;
-        color: white;
-    }
+#startBtn {
+    background: #16a34a;
+    color: white;
+}
 
-    #status {
-        margin-top: 20px;
-        padding: 15px;
-        background: white;
-        border-radius: 10px;
-        text-align: left;
-        line-height: 1.6;
-        word-break: break-word;
-    }
+#stopBtn {
+    background: #dc2626;
+    color: white;
+}
+
+#status {
+    margin-top: 20px;
+    padding: 18px;
+    background: white;
+    border-radius: 10px;
+    text-align: left;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.good {
+    color: #15803d;
+    font-weight: bold;
+}
+
+.waiting {
+    color: #b45309;
+    font-weight: bold;
+}
+
+.error {
+    color: #dc2626;
+    font-weight: bold;
+}
+
 </style>
+
 </head>
+
 
 <body>
 
@@ -62,14 +84,17 @@
     ⏹ Stop
 </button>
 
+
 <div id="status">
-    Location sharing बंद है।
+    🔴 Location sharing बंद है।
 </div>
+
 
 <script>
 
+
 /* =====================================================
-   SUPABASE SETTINGS
+   SUPABASE
 ===================================================== */
 
 const SUPABASE_URL =
@@ -80,22 +105,55 @@ const SUPABASE_KEY =
 
 
 /* =====================================================
+   SETTINGS
+===================================================== */
+
+/*
+   इस accuracy से खराब reading server पर save नहीं होगी.
+*/
+
+const MAX_SAVE_ACCURACY = 30;
+
+
+/*
+   GPS को लगातार बेहतर accuracy खोजने देंगे.
+*/
+
+const GPS_TIMEOUT = 30000;
+
+
+/* =====================================================
    DEVICE ID
 ===================================================== */
 
-let deviceId = localStorage.getItem("location_device_id");
+let deviceId =
+    localStorage.getItem("location_device_id");
+
 
 if (!deviceId) {
 
-    if (crypto.randomUUID) {
-        deviceId = crypto.randomUUID();
+    if (
+        typeof crypto !== "undefined" &&
+        crypto.randomUUID
+    ) {
+
+        deviceId =
+            crypto.randomUUID();
+
     } else {
+
         deviceId =
             Date.now().toString(36) +
-            Math.random().toString(36).substring(2);
+            "-" +
+            Math.random()
+                .toString(36)
+                .substring(2);
     }
 
-    localStorage.setItem("location_device_id", deviceId);
+    localStorage.setItem(
+        "location_device_id",
+        deviceId
+    );
 }
 
 
@@ -104,80 +162,132 @@ if (!deviceId) {
 ===================================================== */
 
 let watchId = null;
+
 let running = false;
 
-let bestAccuracy = Infinity;
-let lastSavedAccuracy = Infinity;
 
-let lastLatitude = null;
-let lastLongitude = null;
+/*
+   अब तक मिली सबसे अच्छी GPS accuracy.
+*/
+
+let bestAccuracy = Infinity;
+
+
+/*
+   Server पर आखिरी बार save हुई accuracy.
+*/
+
+let savedBestAccuracy = Infinity;
+
+
+/*
+   आखिरी saved coordinates.
+*/
+
+let savedLatitude = null;
+let savedLongitude = null;
+
+
+/*
+   Reverse geocoding को बार-बार करने से बचाने के लिए.
+*/
+
+let lastGeoLatitude = null;
+let lastGeoLongitude = null;
 
 
 /* =====================================================
-   STATUS
+   STATUS FUNCTION
 ===================================================== */
 
-function setStatus(message) {
+function setStatus(html) {
 
-    document.getElementById("status").innerHTML = message;
+    document.getElementById(
+        "status"
+    ).innerHTML = html;
 }
 
 
 /* =====================================================
-   START LOCATION
+   START
 ===================================================== */
 
 function startLocation() {
 
     if (running) {
-        return;
-    }
-
-    if (!navigator.geolocation) {
 
         setStatus(
-            "❌ यह browser GPS location support नहीं करता।"
+            "🟢 Location tracking पहले से चालू है।"
         );
 
         return;
     }
 
+
+    if (!navigator.geolocation) {
+
+        setStatus(
+            '<div class="error">' +
+            '❌ यह browser GPS location support नहीं करता।' +
+            '</div>'
+        );
+
+        return;
+    }
+
+
     running = true;
 
     bestAccuracy = Infinity;
-    lastSavedAccuracy = Infinity;
+
+    savedBestAccuracy = Infinity;
+
+    savedLatitude = null;
+
+    savedLongitude = null;
+
 
     setStatus(
-        "📡 GPS शुरू हो रहा है...<br>" +
-        "कृपया खुले स्थान पर 1–3 मिनट फोन को स्थिर रखें।"
+        '<div class="waiting">' +
+        '📡 GPS शुरू हो रहा है...<br><br>' +
+        '</div>' +
+
+        'कृपया फोन को खुले स्थान पर रखें।<br>' +
+        'GPS बेहतर accuracy खोज रहा है...'
     );
 
 
-    watchId = navigator.geolocation.watchPosition(
+    watchId =
+        navigator.geolocation.watchPosition(
 
-        positionSuccess,
+            handlePosition,
 
-        positionError,
+            handlePositionError,
 
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 30000
-        }
+            {
 
-    );
+                enableHighAccuracy: true,
+
+                maximumAge: 0,
+
+                timeout: GPS_TIMEOUT
+
+            }
+
+        );
 }
 
 
 /* =====================================================
-   GPS SUCCESS
+   GPS POSITION
 ===================================================== */
 
-async function positionSuccess(position) {
+async function handlePosition(position) {
 
     if (!running) {
         return;
     }
+
 
     const latitude =
         position.coords.latitude;
@@ -189,98 +299,153 @@ async function positionSuccess(position) {
         position.coords.accuracy;
 
 
-    /* -----------------------------------------------
-       BEST ACCURACY DISPLAY
-    ----------------------------------------------- */
+    /*
+       Best accuracy update.
+    */
 
     if (accuracy < bestAccuracy) {
+
         bestAccuracy = accuracy;
     }
 
 
-    /* -----------------------------------------------
-       DO NOT SAVE POOR ACCURACY
-    ----------------------------------------------- */
+    /*
+       अगर accuracy खराब है,
+       तो server पर save नहीं करेंगे.
+    */
 
-    if (accuracy > 30) {
+    if (accuracy > MAX_SAVE_ACCURACY) {
 
         setStatus(
-            "📡 GPS signal मिल रहा है...<br><br>" +
 
-            "Latitude: " +
+            '<div class="waiting">' +
+            '📡 GPS accuracy improve हो रही है...' +
+            '</div>' +
+
+            '<br>' +
+
+            '🌐 Latitude: ' +
             latitude.toFixed(7) +
 
-            "<br>" +
+            '<br>' +
 
-            "Longitude: " +
+            '🌐 Longitude: ' +
             longitude.toFixed(7) +
 
-            "<br>" +
+            '<br>' +
 
-            "🎯 Current Accuracy: " +
+            '🎯 Current Accuracy: ' +
             Math.round(accuracy) +
-            " m" +
+            ' m' +
 
-            "<br>" +
+            '<br>' +
 
-            "🏆 Best Accuracy: " +
+            '🏆 Best Accuracy: ' +
             Math.round(bestAccuracy) +
-            " m" +
+            ' m' +
 
-            "<br><br>" +
+            '<br><br>' +
 
-            "⏳ Accuracy 30m से बेहतर होने का इंतजार..."
+            '⏳ 30m या उससे बेहतर accuracy का इंतजार...'
         );
 
         return;
     }
 
 
-    /* -----------------------------------------------
-       DON'T SAVE SAME/BAD READING REPEATEDLY
-    ----------------------------------------------- */
+    /*
+       अगर यह accuracy पहले से saved
+       accuracy से बेहतर नहीं है,
+       तो दोबारा save नहीं करेंगे.
+    */
 
-    if (
-        accuracy >= lastSavedAccuracy &&
-        latitude === lastLatitude &&
-        longitude === lastLongitude
-    ) {
+    if (accuracy >= savedBestAccuracy) {
+
+        setStatus(
+
+            '<div class="good">' +
+            '🟢 Best location पहले से save है।' +
+            '</div>' +
+
+            '<br>' +
+
+            '🎯 Current Accuracy: ' +
+            Math.round(accuracy) +
+            ' m' +
+
+            '<br>' +
+
+            '🏆 Saved Best Accuracy: ' +
+            Math.round(savedBestAccuracy) +
+            ' m' +
+
+            '<br><br>' +
+
+            '📡 GPS अभी भी बेहतर signal खोज रहा है...'
+        );
+
         return;
     }
 
 
-    /* -----------------------------------------------
-       SAVE LOCATION
-    ----------------------------------------------- */
+    /*
+       नई best accuracy मिली.
+    */
 
     setStatus(
-        "📍 अच्छी GPS accuracy मिल गई!<br>" +
-        "⏳ Location save हो रही है...<br><br>" +
 
-        "Accuracy: " +
+        '<div class="good">' +
+        '🎯 नई BEST GPS accuracy मिली!' +
+        '</div>' +
+
+        '<br>' +
+
+        'Accuracy: ' +
         Math.round(accuracy) +
-        " m"
+        ' m' +
+
+        '<br><br>' +
+
+        '⏳ Location server पर save हो रही है...'
     );
 
 
     try {
 
         await saveLocation(
+
             latitude,
             longitude,
             accuracy
+
         );
 
-        lastSavedAccuracy = accuracy;
 
-        lastLatitude = latitude;
-        lastLongitude = longitude;
+        /*
+           Save successful होने के बाद
+           best saved accuracy update करें.
+        */
+
+        savedBestAccuracy =
+            accuracy;
+
+        savedLatitude =
+            latitude;
+
+        savedLongitude =
+            longitude;
 
 
     } catch (error) {
 
         setStatus(
-            "❌ Location save failed<br><br>" +
+
+            '<div class="error">' +
+            '❌ Location save failed' +
+            '</div>' +
+
+            '<br>' +
+
             error.message
         );
     }
@@ -288,30 +453,47 @@ async function positionSuccess(position) {
 
 
 /* =====================================================
-   SAVE LOCATION TO SUPABASE
+   SAVE LOCATION
 ===================================================== */
 
 async function saveLocation(
+
     latitude,
     longitude,
     accuracy
+
 ) {
 
+
     let city = "";
+
     let state = "";
 
 
-    /* -----------------------------------------------
+    /* =================================================
        REVERSE GEOCODING
-    ----------------------------------------------- */
+    ================================================= */
 
     try {
 
+        /*
+           अगर coordinates बहुत ज्यादा
+           change नहीं हुए हैं तो पुराना
+           city/state reuse कर सकते हैं.
+        */
+
         const geoUrl =
+
             "https://api.bigdatacloud.net/data/" +
+
             "reverse-geocode-client" +
-            "?latitude=" + encodeURIComponent(latitude) +
-            "&longitude=" + encodeURIComponent(longitude) +
+
+            "?latitude=" +
+            encodeURIComponent(latitude) +
+
+            "&longitude=" +
+            encodeURIComponent(longitude) +
+
             "&localityLanguage=en";
 
 
@@ -328,70 +510,89 @@ async function saveLocation(
             city =
                 geoData.city ||
                 geoData.locality ||
+                geoData.localityInfo?.administrative?.[2]?.name ||
                 geoData.principalSubdivision ||
                 "";
+
 
             state =
                 geoData.principalSubdivision ||
                 "";
-
         }
 
-    } catch (geoError) {
+
+    } catch (error) {
 
         console.log(
-            "Reverse geocoding failed:",
-            geoError
+            "Reverse geocoding error:",
+            error
         );
     }
 
 
-    /* -----------------------------------------------
+    /* =================================================
        SUPABASE INSERT
-    ----------------------------------------------- */
+    ================================================= */
 
     const url =
+
         SUPABASE_URL +
         "/rest/v1/locations";
 
 
     const response =
-        await fetch(url, {
 
-            method: "POST",
+        await fetch(
 
-            headers: {
+            url,
 
-                "apikey": SUPABASE_KEY,
+            {
 
-                "Content-Type":
-                    "application/json",
+                method: "POST",
 
-                "Accept":
-                    "application/json",
+                headers: {
 
-                "Prefer":
-                    "return=representation"
+                    "apikey":
+                        SUPABASE_KEY,
 
-            },
+                    "Content-Type":
+                        "application/json",
 
-            body: JSON.stringify({
+                    "Accept":
+                        "application/json",
 
-                device_id: deviceId,
+                    "Prefer":
+                        "return=representation"
 
-                latitude: latitude,
+                },
 
-                longitude: longitude,
 
-                accuracy: accuracy,
+                body:
 
-                city: city,
+                    JSON.stringify({
 
-                state: state
+                        device_id:
+                            deviceId,
 
-            })
+                        latitude:
+                            latitude,
 
-        });
+                        longitude:
+                            longitude,
+
+                        accuracy:
+                            accuracy,
+
+                        city:
+                            city,
+
+                        state:
+                            state
+
+                    })
+
+            }
+        );
 
 
     const responseText =
@@ -401,46 +602,73 @@ async function saveLocation(
     if (!response.ok) {
 
         throw new Error(
+
             "Supabase HTTP " +
             response.status +
-            "\n" +
+
+            "<br><br>" +
+
             responseText
+
         );
     }
 
 
+    /* =================================================
+       SUCCESS
+    ================================================= */
+
     setStatus(
 
-        "🟢 Location Successfully Saved!<br><br>" +
+        '<div class="good">' +
+        '✅ BEST LOCATION SERVER पर SAVE हो गई' +
+        '</div>' +
 
-        "📍 Latitude: " +
+        '<br>' +
+
+        '📱 Device ID:<br>' +
+        deviceId +
+
+        '<br><br>' +
+
+        '🌐 Latitude: ' +
         latitude.toFixed(7) +
 
-        "<br>" +
+        '<br>' +
 
-        "📍 Longitude: " +
+        '🌐 Longitude: ' +
         longitude.toFixed(7) +
 
-        "<br>" +
+        '<br>' +
 
-        "🎯 Accuracy: " +
-        Math.round(accuracy) +
-        " m" +
-
-        "<br>" +
-
-        "🏙️ City: " +
+        '🏙️ City: ' +
         (city || "Unknown") +
 
-        "<br>" +
+        '<br>' +
 
-        "🗺️ State: " +
+        '🗺️ State: ' +
         (state || "Unknown") +
 
-        "<br><br>" +
+        '<br>' +
 
-        "📱 Device ID:<br>" +
-        deviceId
+        '🎯 Accuracy: ' +
+        Math.round(accuracy) +
+        ' m' +
+
+        '<br>' +
+
+        '🏆 Best Accuracy: ' +
+        Math.round(
+            Math.min(
+                accuracy,
+                bestAccuracy
+            )
+        ) +
+        ' m' +
+
+        '<br><br>' +
+
+        '📡 GPS अभी भी बेहतर accuracy खोज रहा है...'
     );
 }
 
@@ -449,40 +677,51 @@ async function saveLocation(
    GPS ERROR
 ===================================================== */
 
-function positionError(error) {
+function handlePositionError(error) {
 
-    let message =
-        "❌ GPS Error<br><br>";
+
+    let message = "";
 
 
     if (error.code === 1) {
 
-        message +=
-            "Location permission denied.";
+        message =
+            "❌ Location permission denied.";
 
-    } else if (error.code === 2) {
+    }
 
-        message +=
-            "Location unavailable.";
+    else if (error.code === 2) {
 
-    } else if (error.code === 3) {
+        message =
+            "❌ Location unavailable.";
 
-        message +=
-            "GPS timeout. फिर से कोशिश हो रही है.";
+    }
 
-    } else {
+    else if (error.code === 3) {
 
-        message +=
+        message =
+            "⏳ GPS timeout. फिर से कोशिश हो रही है...";
+
+    }
+
+    else {
+
+        message =
+            "❌ GPS Error: " +
             error.message;
     }
 
 
-    setStatus(message);
+    setStatus(
+        '<div class="error">' +
+        message +
+        '</div>'
+    );
 }
 
 
 /* =====================================================
-   STOP LOCATION
+   STOP
 ===================================================== */
 
 function stopLocation() {
@@ -501,9 +740,18 @@ function stopLocation() {
 
 
     setStatus(
-        "🔴 Location sharing बंद है।"
+
+        '<div class="error">' +
+        '🔴 Location sharing बंद है।' +
+        '</div>' +
+
+        '<br>' +
+
+        '📱 Device ID:<br>' +
+        deviceId
     );
 }
+
 
 </script>
 
