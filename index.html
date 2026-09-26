@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Madam Live Location Searching</title>
-
+<title>मैडम की लाइव लोकेशन सर्चिंग</title>
 <style>
 
 body {
@@ -58,17 +58,18 @@ button {
 <div class="container">
 
 <h2>📍 Madam Live Location Searching</h2>
+<h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
 
-<button
+    <button
     class="start"
     onclick="startTracking()">
-    ▶ Start Location
+    ▶ Start Location / मैडम की लोकेशन सर्च करना स्टार्ट करें
 </button>
 
 <button
     class="stop"
     onclick="stopTracking()">
-    ⏹ Stop
+    ⏹ Stop / मैडम की लोकेशन सर्च करना बंद करें
 </button>
 
 <div id="status">
@@ -130,7 +131,7 @@ function startTracking() {
         document.getElementById(
             "status"
         ).innerHTML =
-            "❌ GPS supported नहीं है.";
+            "❌Madam GPS supported नहीं है.";
 
         return;
     }
@@ -139,7 +140,7 @@ function startTracking() {
     document.getElementById(
         "status"
     ).innerHTML =
-        "📡 GPS signal मिल रहा है...";
+        "📡 Madam GPS signal मिल रहा है...";
 
 
     watchId =
@@ -161,7 +162,7 @@ function startTracking() {
                     "status"
                 ).innerHTML = `
 
-                    📡 GPS signal मिल रहा है...
+                    📡 Madam GPS signal मिल रहा है...
 
                     <br><br>
 
@@ -180,7 +181,7 @@ function startTracking() {
 
                     <br><br>
 
-                    ⏳ Location save हो रही है...
+                    ⏳ Madam Location save हो रही है...
 
                 `;
 
@@ -344,7 +345,7 @@ async function saveLocation(
             "status"
         ).innerHTML = `
 
-            ✅ Location Saved
+            ✅ Madam Location Saved
 
             <br><br>
 
@@ -363,17 +364,17 @@ async function saveLocation(
 
             <br>
 
-            🏙️ City:
+            🏙️ Madam City:
             ${city || "-"}
 
             <br>
 
-            🗺️ State:
+            🗺️ Madam State:
             ${state || "-"}
 
             <br><br>
 
-            🟢 GPS tracking चालू है...
+            🟢 Madam GPS tracking चालू है...
 
         `;
 
@@ -390,7 +391,7 @@ async function saveLocation(
             "status"
         ).innerHTML = `
 
-            ⚠️ GPS मिल रहा है लेकिन
+            ⚠️ Madam GPS मिल रहा है लेकिन
             server पर save नहीं हो पाया.
 
             <br><br>
@@ -421,7 +422,7 @@ function stopTracking() {
     document.getElementById(
         "status"
     ).innerHTML =
-        "⏹ Location tracking बंद है.";
+        "⏹ Madam Location tracking बंद है.";
 }
 
 </script>
