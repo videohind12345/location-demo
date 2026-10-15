@@ -1,13 +1,17 @@
-```html
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Madam Live Location Searching मैडम की लाइव लोकेशन सर्चिंग </title>
+<title>Madam Live Location Searching मैडम की लाइव लोकेशन सर्चिंग</title>
 
 <style>
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     background: #f5f5f5;
@@ -21,13 +25,39 @@ body {
     margin: auto;
 }
 
+.phone-label {
+    display: block;
+    text-align: left;
+    font-weight: bold;
+    margin: 22px 0 8px;
+}
+
+.phone-input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 17px;
+    background: white;
+}
+
+.note {
+    text-align: left;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    margin-top: 8px;
+}
+
 button {
-    padding: 12px 20px;
-    margin: 8px;
+    padding: 14px 18px;
+    margin: 18px 0 8px;
+    width: 100%;
     border: none;
     border-radius: 8px;
     font-size: 16px;
     cursor: pointer;
+    line-height: 1.5;
 }
 
 .start {
@@ -43,12 +73,8 @@ button {
 }
 
 @keyframes greenBlink {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.4;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
 #status {
@@ -57,7 +83,7 @@ button {
     margin-top: 20px;
     border-radius: 12px;
     text-align: left;
-    line-height: 1.7;
+    line-height: 1.8;
     word-break: break-word;
 }
 </style>
@@ -66,19 +92,39 @@ button {
 <body>
 <div class="container">
 
-<h2>📍 Madam Live Location Searching</h2>
-<h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
+    <h2>📍 Madam Live Location Searching</h2>
+    <h2>📍 मैडम की लाइव लोकेशन सर्चिंग</h2>
 
-<button
-    class="start"
-    id="startButton"
-    onclick="startTracking()">
-    ▶ Start Location / मैडम की लोकेशन सर्च करना शुरू करें
-</button>
+    <label class="phone-label" for="phoneInput">
+        📱 मोबाइल नंबर / Mobile Number (Optional)
+    </label>
 
-<div id="status">
-📡 मैडम की लोकेशन शेयर करना अभी शुरू नहीं हुआ है।
-</div>
+    <input
+        type="tel"
+        id="phoneInput"
+        class="phone-input"
+        inputmode="tel"
+        maxlength="16"
+        placeholder="मोबाइल नंबर डालें या खाली छोड़ दें"
+        autocomplete="tel"
+    >
+
+    <div class="note">
+        मोबाइल नंबर डालना जरूरी नहीं है।<br>
+        नंबर खाली रहने पर भी लोकेशन काम करेगी।<br>
+        मोबाइल नंबर डालने पर वह डैशबोर्ड पर दिखाई देगा।
+    </div>
+
+    <button
+        class="start"
+        id="startButton"
+        onclick="startTracking()">
+        ▶ Start Location / मैडम की लोकेशन सर्च करना शुरू करें
+    </button>
+
+    <div id="status">
+        📡 मैडम की लोकेशन शेयर करना अभी शुरू नहीं हुआ है।
+    </div>
 
 </div>
 
@@ -108,13 +154,57 @@ if (!deviceId) {
 
 
 /* ==========================================
-   GPS AND AUTO STOP
+   TRACKING VARIABLES
 ========================================== */
 
 let watchId = null;
 let autoStopTimeout = null;
 let sessionActive = false;
 let sessionNumber = 0;
+let sessionPhoneNumber = null;
+
+
+/* ==========================================
+   PHONE NUMBER VALIDATION
+   PHONE NUMBER IS OPTIONAL
+========================================== */
+
+function getPhoneNumber() {
+
+    const input = document.getElementById("phoneInput");
+    const phoneNumber = input.value.trim();
+
+    // खाली नंबर की अनुमति है
+    if (phoneNumber === "") {
+        return {
+            valid: true,
+            number: null
+        };
+    }
+
+    const digits = phoneNumber.replace(/\D/g, "");
+
+    // भारत का 10 अंकों का मोबाइल नंबर
+    if (/^[6-9]\d{9}$/.test(digits)) {
+        return {
+            valid: true,
+            number: "+91" + digits
+        };
+    }
+
+    // 91 के साथ 12 अंकों का नंबर
+    if (/^91[6-9]\d{9}$/.test(digits)) {
+        return {
+            valid: true,
+            number: "+" + digits
+        };
+    }
+
+    return {
+        valid: false,
+        number: null
+    };
+}
 
 
 /* ==========================================
@@ -127,18 +217,43 @@ function startTracking() {
         return;
     }
 
-    if (!navigator.geolocation) {
-        document.getElementById("status").innerHTML =
-            "❌ इस ब्राउज़र में GPS सपोर्ट उपलब्ध नहीं है।";
+    const button = document.getElementById("startButton");
+    const phoneInput = document.getElementById("phoneInput");
+    const phoneResult = getPhoneNumber();
+
+    // गलत नंबर होने पर ट्रैकिंग शुरू न करें
+    if (!phoneResult.valid) {
+
+        document.getElementById("status").innerHTML = `
+            ❌ मोबाइल नंबर सही नहीं है।
+            <br><br>
+            भारत का 10 अंकों का मोबाइल नंबर डालें,
+            या नंबर वाला बॉक्स खाली छोड़ दें।
+        `;
+
+        phoneInput.focus();
         return;
     }
 
-    const button = document.getElementById("startButton");
+    // इस सत्र के लिए नंबर तय करें
+    sessionPhoneNumber = phoneResult.number;
+
+    if (!navigator.geolocation) {
+
+        document.getElementById("status").innerHTML =
+            "❌ इस ब्राउज़र में GPS सपोर्ट उपलब्ध नहीं है।";
+
+        return;
+    }
 
     button.disabled = true;
+    phoneInput.disabled = true;
 
-    document.getElementById("status").innerHTML =
-        "📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है...";
+    document.getElementById("status").innerHTML = `
+        📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है...
+        <br><br>
+        कृपया फोन में Location चालू रखें।
+    `;
 
     navigator.geolocation.getCurrentPosition(
 
@@ -167,13 +282,17 @@ function startTracking() {
                 thisSession
             );
 
-            // GPS से आगे की लोकेशन अपडेट लें
+            // आगे की GPS लोकेशन अपडेट लें
             watchId = navigator.geolocation.watchPosition(
 
                 currentPosition => {
 
-                    if (!sessionActive ||
-                        thisSession !== sessionNumber) return;
+                    if (
+                        !sessionActive ||
+                        thisSession !== sessionNumber
+                    ) {
+                        return;
+                    }
 
                     saveLocation(
                         currentPosition.coords.latitude,
@@ -185,8 +304,12 @@ function startTracking() {
 
                 error => {
 
-                    if (!sessionActive ||
-                        thisSession !== sessionNumber) return;
+                    if (
+                        !sessionActive ||
+                        thisSession !== sessionNumber
+                    ) {
+                        return;
+                    }
 
                     document.getElementById("status").innerHTML = `
                         ⚠️ GPS अपडेट में समस्या आई।
@@ -204,7 +327,7 @@ function startTracking() {
                 }
             );
 
-            // पहली लोकेशन मिलने के बाद 3 मिनट का समय शुरू
+            // पहली लोकेशन मिलने के बाद 3 मिनट
             autoStopTimeout = setTimeout(() => {
                 stopTracking(thisSession);
             }, 3 * 60 * 1000);
@@ -214,14 +337,19 @@ function startTracking() {
         error => {
 
             button.disabled = false;
+            phoneInput.disabled = false;
+
             button.style.animation = "greenBlink 1s infinite";
 
             document.getElementById("status").innerHTML = `
                 ❌ GPS लोकेशन प्राप्त नहीं हो सकी।
                 <br><br>
-                कृपया फोन की Location चालू करें और अनुमति दें।
+                कृपया फोन की Location चालू करें
+                और ब्राउज़र को लोकेशन की अनुमति दें।
                 <br><br>
                 फिर हरे बटन को दोबारा दबाएँ।
+                <br><br>
+                समस्या: ${error.message}
             `;
         },
 
@@ -245,8 +373,12 @@ async function saveLocation(
     thisSession
 ) {
 
-    if (!sessionActive ||
-        thisSession !== sessionNumber) return;
+    if (
+        !sessionActive ||
+        thisSession !== sessionNumber
+    ) {
+        return;
+    }
 
     try {
 
@@ -281,12 +413,19 @@ async function saveLocation(
 
         } catch (geoError) {
 
-            console.log("Reverse geocoding failed:", geoError);
+            console.log(
+                "Reverse geocoding failed:",
+                geoError
+            );
         }
 
         // ट्रैकिंग बंद होने पर नया रिकॉर्ड न भेजें
-        if (!sessionActive ||
-            thisSession !== sessionNumber) return;
+        if (
+            !sessionActive ||
+            thisSession !== sessionNumber
+        ) {
+            return;
+        }
 
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/locations",
@@ -302,6 +441,10 @@ async function saveLocation(
 
                 body: JSON.stringify({
                     device_id: deviceId,
+
+                    // नंबर खाली होने पर NULL सेव होगा
+                    phone_number: sessionPhoneNumber,
+
                     latitude: latitude,
                     longitude: longitude,
                     accuracy: accuracy,
@@ -316,18 +459,26 @@ async function saveLocation(
             throw new Error(errorText);
         }
 
-        if (!sessionActive ||
-            thisSession !== sessionNumber) return;
+        if (
+            !sessionActive ||
+            thisSession !== sessionNumber
+        ) {
+            return;
+        }
+
+        const phoneDisplay =
+            sessionPhoneNumber || "नंबर नहीं दिया गया";
 
         document.getElementById("status").innerHTML = `
-            📍 लोकेशन सर्चिंग शुरू हो गई है।
+            📍 लोकेशन सर्चिंग शुरू है।
             <br><br>
-            कृपया इसे 3 मिनट तक चलने दें।
-            इसके बाद यह अपने आप बंद हो जाएगी।
+            ⏳ यह 3 मिनट बाद अपने आप बंद होगी।
             <br><br>
+            📱 मोबाइल नंबर: ${phoneDisplay}
+            <br>
             ✅ लोकेशन सर्वर पर सेव हो गई।
             <br>
-            🎯 Accuracy: ${accuracy.toFixed(1)} m
+            🎯 Accuracy: ${Number(accuracy).toFixed(1)} m
             <br>
             🏙️ City: ${city || "-"}
             <br>
@@ -338,12 +489,16 @@ async function saveLocation(
 
         console.error("Supabase Error:", error);
 
-        if (sessionActive &&
-            thisSession === sessionNumber) {
+        if (
+            sessionActive &&
+            thisSession === sessionNumber
+        ) {
 
             document.getElementById("status").innerHTML += `
                 <br><br>
                 ⚠️ लोकेशन सर्वर पर सेव नहीं हो पाई।
+                <br>
+                कृपया इंटरनेट या Supabase सेटिंग जाँचें।
             `;
         }
     }
@@ -356,8 +511,12 @@ async function saveLocation(
 
 function stopTracking(thisSession) {
 
-    if (!sessionActive ||
-        thisSession !== sessionNumber) return;
+    if (
+        !sessionActive ||
+        thisSession !== sessionNumber
+    ) {
+        return;
+    }
 
     sessionActive = false;
 
@@ -377,17 +536,23 @@ function stopTracking(thisSession) {
         लोकेशन सर्चिंग अपने आप बंद हो गई है।
         <br><br>
         पहले से सेव लोकेशन रिकॉर्ड सुरक्षित हैं।
+        <br><br>
+        अगली बार नया मोबाइल नंबर भी डाल सकते हैं
+        या नंबर खाली छोड़ सकते हैं।
     `;
 
     const button = document.getElementById("startButton");
+    const phoneInput = document.getElementById("phoneInput");
 
     button.disabled = false;
+    phoneInput.disabled = false;
 
-    // बंद होने के बाद हरा बटन फिर ब्लिंक करे
+    // दोबारा शुरू करने के लिए बटन ब्लिंक करे
     button.style.animation = "greenBlink 1s infinite";
+
+    sessionPhoneNumber = null;
 }
 
 </script>
 </body>
 </html>
-```
