@@ -1,445 +1,368 @@
-```html
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Location Dashboard</title>
 
-    <title>Live Location Dashboard</title>
+<style>
+* { box-sizing: border-box; }
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+}
 
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            color: #222;
-        }
+.container {
+    max-width: 900px;
+    margin: auto;
+}
 
-        .container {
-            max-width: 900px;
-            margin: auto;
-        }
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.08);
+}
 
-        .card {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-        }
+.card h2 { margin-top: 0; }
 
-        .card h2 {
-            margin-top: 0;
-        }
+.row {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    word-break: break-word;
+}
 
-        .row {
-            padding: 10px 0;
-            border-bottom: 1px solid #eeeeee;
-            word-break: break-word;
-        }
+.row:last-child { border-bottom: none; }
 
-        .row:last-child {
-            border-bottom: none;
-        }
+.label {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
 
-        .label {
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
+.phone {
+    color: #075cab;
+    font-weight: bold;
+    font-size: 18px;
+}
 
-        .good {
-            color: green;
-            font-weight: bold;
-        }
+.good { color: green; font-weight: bold; }
+.medium { color: #d68910; font-weight: bold; }
+.poor { color: red; font-weight: bold; }
 
-        .medium {
-            color: #d68910;
-            font-weight: bold;
-        }
+.history-item {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
 
-        .poor {
-            color: red;
-            font-weight: bold;
-        }
+.history-number {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
 
-        .history-item {
-            background: #fafafa;
-            border: 1px solid #dddddd;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 12px;
-        }
+.map-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #1976d2;
+    color: white;
+    text-decoration: none;
+    border-radius: 7px;
+    font-weight: bold;
+}
 
-        .history-number {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
+.map-btn:hover { background: #125ca1; }
 
-        .map-btn {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: #1976d2;
-            color: white;
-            text-decoration: none;
-            border-radius: 7px;
-            font-weight: bold;
-        }
+.status {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
 
-        .map-btn:hover {
-            background: #125ca1;
-        }
+.loading {
+    text-align: center;
+    color: #666;
+    padding: 15px;
+}
 
-        .status {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
+.empty {
+    text-align: center;
+    padding: 20px;
+    color: #777;
+}
 
-        .loading {
-            text-align: center;
-            color: #666;
-            padding: 15px;
-        }
+.error {
+    background: #ffe5e5;
+    color: #b00020;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    word-break: break-word;
+}
 
-        .empty {
-            text-align: center;
-            padding: 20px;
-            color: #777;
-        }
-
-        .error {
-            background: #ffe5e5;
-            color: #b00020;
-            padding: 14px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            word-break: break-word;
-        }
-
-        .refresh-info {
-            text-align: center;
-            font-size: 13px;
-            color: #666;
-            margin-top: 10px;
-        }
-
-        .time-info {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            margin-top: 6px;
-        }
-    </style>
+.refresh-info, .time-info {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin-top: 10px;
+}
+</style>
 </head>
 
 <body>
-
 <div class="container">
 
-    <h1>📍 Live Location Dashboard</h1>
+<h1>📍 Live Location Dashboard</h1>
 
-    <div id="status" class="status">
-        🔄 Location data loading...
+<div id="status" class="status">
+    🔄 Location data loading...
+</div>
+
+<div id="errorBox"></div>
+
+<div class="card">
+    <h2>📍 Latest Location</h2>
+    <div id="latestContent" class="loading">
+        Location loading...
     </div>
+</div>
 
-    <div id="errorBox"></div>
-
-
-    <!-- =========================================
-         LATEST LOCATION
-    ========================================== -->
-
-    <div class="card">
-
-        <h2>📍 Latest Location</h2>
-
-        <div id="latestContent">
-
-            <div class="loading">
-                Location loading...
-            </div>
-
-        </div>
-
+<div class="card">
+    <h2>🕘 Location History</h2>
+    <div id="historyContent" class="loading">
+        History loading...
     </div>
-
-
-    <!-- =========================================
-         LOCATION HISTORY
-    ========================================== -->
-
-    <div class="card">
-
-        <h2>🕘 Location History</h2>
-
-        <div id="historyContent">
-
-            <div class="loading">
-                History loading...
-            </div>
-
-        </div>
-
-        <div class="refresh-info">
-            🔄 Automatically refreshes every 5 seconds
-        </div>
-
-        <div id="lastRefresh" class="time-info">
-        </div>
-
+    <div class="refresh-info">
+        🔄 Automatically refreshes every 5 seconds
     </div>
+    <div id="lastRefresh" class="time-info"></div>
+</div>
 
 </div>
 
-
 <script>
-
-/* ==================================================
-   SUPABASE SETTINGS
-================================================== */
+/* SUPABASE SETTINGS */
 
 const SUPABASE_URL =
-    "https://qtfnupdojsqpuywhoryu.supabase.co";
+"https://qtfnupdojsqpuywhoryu.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
-/* ==================================================
-   DOM ELEMENTS
-================================================== */
+/* DOM ELEMENTS */
 
-const latestContent =
-    document.getElementById("latestContent");
-
-const historyContent =
-    document.getElementById("historyContent");
-
-const statusBox =
-    document.getElementById("status");
-
-const errorBox =
-    document.getElementById("errorBox");
-
-const lastRefresh =
-    document.getElementById("lastRefresh");
+const latestContent = document.getElementById("latestContent");
+const historyContent = document.getElementById("historyContent");
+const statusBox = document.getElementById("status");
+const errorBox = document.getElementById("errorBox");
+const lastRefresh = document.getElementById("lastRefresh");
 
 
-/* ==================================================
-   FORMAT DATE / TIME
-================================================== */
+/* SAFE HTML TEXT */
 
-function formatTime(dateString) {
-
-    if (!dateString) {
-        return "Unknown";
-    }
-
-    const date =
-        new Date(dateString);
-
-    if (isNaN(date.getTime())) {
-        return dateString;
-    }
-
-    return date.toLocaleString(
-        "en-IN",
-        {
-            dateStyle: "medium",
-            timeStyle: "medium"
-        }
-    );
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, function(char) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char];
+    });
 }
 
 
-/* ==================================================
-   ACCURACY COLOR
-================================================== */
+/* DATE / TIME */
+
+function formatTime(dateString) {
+    if (!dateString) return "Unknown";
+
+    const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) return dateString;
+
+    return date.toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "medium"
+    });
+}
+
+
+/* ACCURACY COLOR */
 
 function accuracyClass(accuracy) {
+    const value = Number(accuracy);
 
-    const value =
-        Number(accuracy);
-
-    if (!Number.isFinite(value)) {
-        return "";
-    }
-
-    if (value <= 20) {
-        return "good";
-    }
-
-    if (value <= 100) {
-        return "medium";
-    }
+    if (!Number.isFinite(value)) return "";
+    if (value <= 20) return "good";
+    if (value <= 100) return "medium";
 
     return "poor";
 }
 
 
-/* ==================================================
-   GOOGLE MAPS LINK
-================================================== */
+/* DISPLAY PHONE NUMBER */
+
+function phoneHTML(phone) {
+    const number = String(phone ?? "").trim();
+
+    if (!number) {
+        return `
+            <span>उपलब्ध नहीं</span>
+        `;
+    }
+
+    return `
+        <span class="phone">${escapeHTML(number)}</span>
+    `;
+}
+
+
+/* GOOGLE MAPS LINK */
 
 function mapLink(latitude, longitude) {
-
-    const lat =
-        Number(latitude);
-
-    const lon =
-        Number(longitude);
-
+    const lat = Number(latitude);
+    const lon = Number(longitude);
 
     if (
         !Number.isFinite(lat) ||
-        !Number.isFinite(lon)
+        !Number.isFinite(lon) ||
+        latitude === null ||
+        longitude === null
     ) {
-
         return "";
-
     }
 
-
-    const url =
-        "https://www.google.com/maps?q=" +
-        encodeURIComponent(
-            lat + "," + lon
-        );
-
+    const url = "https://www.google.com/maps?q=" +
+        encodeURIComponent(lat + "," + lon);
 
     return `
-        <a
-            class="map-btn"
-            href="${url}"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            🗺️ Open in Google Maps
+        <a class="map-btn"
+           href="${url}"
+           target="_blank"
+           rel="noopener noreferrer">
+           🗺️ Open in Google Maps
         </a>
     `;
 }
 
 
-/* ==================================================
-   LOAD LOCATIONS
-================================================== */
+/* LOCATION DETAILS */
+
+function locationDetails(location, includeDevice) {
+    const accuracy = Number(location.accuracy);
+
+    return `
+        ${includeDevice ? `
+        <div class="row">
+            <div class="label">📱 Device ID:</div>
+            ${escapeHTML(location.device_id || "Unknown")}
+        </div>` : ""}
+
+        <div class="row">
+            <div class="label">📞 Mobile Number:</div>
+            ${phoneHTML(location.phone_number)}
+        </div>
+
+        <div class="row">
+            <div class="label">🏙️ City:</div>
+            ${escapeHTML(location.city || "उपलब्ध नहीं")}
+        </div>
+
+        <div class="row">
+            <div class="label">🗺️ State:</div>
+            ${escapeHTML(location.state || "उपलब्ध नहीं")}
+        </div>
+
+        <div class="row">
+            <div class="label">🌐 Latitude:</div>
+            ${escapeHTML(location.latitude ?? "उपलब्ध नहीं")}
+        </div>
+
+        <div class="row">
+            <div class="label">🌐 Longitude:</div>
+            ${escapeHTML(location.longitude ?? "उपलब्ध नहीं")}
+        </div>
+
+        <div class="row">
+            <div class="label">🎯 Accuracy:</div>
+            <span class="${accuracyClass(accuracy)}">
+                ${
+                    Number.isFinite(accuracy)
+                    ? Math.round(accuracy) + " मीटर"
+                    : escapeHTML(location.accuracy ?? "उपलब्ध नहीं")
+                }
+            </span>
+        </div>
+
+        <div class="row">
+            <div class="label">🕐 Time:</div>
+            ${escapeHTML(formatTime(location.created_at))}
+        </div>
+
+        ${mapLink(location.latitude, location.longitude)}
+    `;
+}
+
+
+/* LOAD LOCATIONS */
+
+let loading = false;
 
 async function loadLocations() {
-
-    errorBox.innerHTML = "";
-
-    statusBox.innerHTML =
-        "🔄 Loading latest location...";
-
+    if (loading) return;
+    loading = true;
 
     try {
-
-        /* ------------------------------------------
-           SUPABASE REST API URL
-        ------------------------------------------ */
+        errorBox.innerHTML = "";
 
         const url =
             SUPABASE_URL +
             "/rest/v1/locations" +
-            "?select=id,device_id,latitude,longitude,accuracy,city,state,created_at" +
+            "?select=id,device_id,phone_number,latitude,longitude,accuracy,city,state,created_at" +
             "&order=created_at.desc" +
             "&limit=100";
 
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "apikey": SUPABASE_KEY
+            }
+        });
 
-        /* ------------------------------------------
-           FETCH DATA
-        ------------------------------------------ */
-
-        const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "apikey":
-                            SUPABASE_KEY
-                    }
-                }
-            );
-
-
-        /* ------------------------------------------
-           GET RESPONSE TEXT
-        ------------------------------------------ */
-
-        const responseText =
-            await response.text();
-
-
-        /* ------------------------------------------
-           CHECK HTTP ERROR
-        ------------------------------------------ */
+        const responseText = await response.text();
 
         if (!response.ok) {
-
             throw new Error(
                 "Supabase Error " +
-                response.status +
-                ": " +
-                responseText
+                response.status + ": " + responseText
             );
-
         }
 
+        const data = JSON.parse(responseText);
 
-        /* ------------------------------------------
-           CONVERT JSON
-        ------------------------------------------ */
-
-        let data;
-
-
-        try {
-
-            data =
-                JSON.parse(
-                    responseText
-                );
-
-        }
-        catch (jsonError) {
-
-            throw new Error(
-                "Invalid JSON response: " +
-                responseText
-            );
-
-        }
-
-
-        /* ------------------------------------------
-           CHECK DATA
-        ------------------------------------------ */
-
-        if (
-            !Array.isArray(data) ||
-            data.length === 0
-        ) {
-
+        if (!Array.isArray(data) || data.length === 0) {
             latestContent.innerHTML = `
                 <div class="empty">
                     📭 अभी कोई location data नहीं मिला।
                 </div>
             `;
-
 
             historyContent.innerHTML = `
                 <div class="empty">
@@ -447,347 +370,63 @@ async function loadLocations() {
                 </div>
             `;
 
-
-            statusBox.innerHTML =
-                "⚠️ No location data found";
-
+            statusBox.textContent = "⚠️ No location data found";
+            lastRefresh.textContent =
+                "Last checked: " + formatTime(new Date().toISOString());
 
             return;
         }
 
+        /* LATEST LOCATION */
 
-        /* ==================================================
-           LATEST LOCATION
-        ================================================== */
+        latestContent.innerHTML = locationDetails(data[0], true);
 
-        const latest =
-            data[0];
-
-
-        const latestAccuracy =
-            Number(
-                latest.accuracy
-            );
-
-
-        latestContent.innerHTML = `
-
-            <div class="row">
-
-                <div class="label">
-                    📱 Device ID:
-                </div>
-
-                ${latest.device_id || "Unknown"}
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🏙️ City:
-                </div>
-
-                ${latest.city || "उपलब्ध नहीं"}
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🗺️ State:
-                </div>
-
-                ${latest.state || "उपलब्ध नहीं"}
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🌐 Latitude:
-                </div>
-
-                ${latest.latitude}
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🌐 Longitude:
-                </div>
-
-                ${latest.longitude}
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🎯 Accuracy:
-                </div>
-
-                <span class="${accuracyClass(latestAccuracy)}">
-
-                    ${
-                        Number.isFinite(
-                            latestAccuracy
-                        )
-                        ? Math.round(
-                            latestAccuracy
-                        ) + " मीटर"
-                        : latest.accuracy
-                    }
-
-                </span>
-
-            </div>
-
-
-            <div class="row">
-
-                <div class="label">
-                    🕐 Created At:
-                </div>
-
-                ${formatTime(
-                    latest.created_at
-                )}
-
-            </div>
-
-
-            ${mapLink(
-                latest.latitude,
-                latest.longitude
-            )}
-
-        `;
-
-
-        /* ==================================================
-           LOCATION HISTORY
-        ================================================== */
+        /* LOCATION HISTORY */
 
         historyContent.innerHTML = "";
 
+        data.forEach((location, index) => {
+            const item = document.createElement("div");
+            item.className = "history-item";
 
-        data.forEach(
-            (location, index) => {
+            item.innerHTML = `
+                <div class="history-number">#${index + 1}</div>
+                ${locationDetails(location, true)}
+            `;
 
-                const accuracy =
-                    Number(
-                        location.accuracy
-                    );
+            historyContent.appendChild(item);
+        });
 
+        statusBox.textContent =
+            "🟢 Location Connected • " + data.length + " records found";
 
-                historyContent.insertAdjacentHTML(
-                    "beforeend",
+        lastRefresh.textContent =
+            "Last refresh: " + formatTime(new Date().toISOString());
 
-                    `
+    } catch (error) {
+        console.error("LOCATION ERROR:", error);
 
-                    <div class="history-item">
+        statusBox.textContent = "🔴 Location data load failed";
 
-                        <div class="history-number">
-                            #${index + 1}
-                        </div>
+        errorBox.innerHTML = "";
 
+        const errorMessage = document.createElement("div");
+        errorMessage.className = "error";
+        errorMessage.textContent = "❌ " + error.message;
 
-                        <div class="row">
+        errorBox.appendChild(errorMessage);
 
-                            <div class="label">
-                                📱 Device ID:
-                            </div>
-
-                            ${
-                                location.device_id ||
-                                "Unknown"
-                            }
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🏙️ City:
-                            </div>
-
-                            ${
-                                location.city ||
-                                "उपलब्ध नहीं"
-                            }
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🗺️ State:
-                            </div>
-
-                            ${
-                                location.state ||
-                                "उपलब्ध नहीं"
-                            }
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🌐 Latitude:
-                            </div>
-
-                            ${
-                                location.latitude
-                            }
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🌐 Longitude:
-                            </div>
-
-                            ${
-                                location.longitude
-                            }
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🎯 Accuracy:
-                            </div>
-
-                            <span
-                                class="${accuracyClass(
-                                    accuracy
-                                )}"
-                            >
-
-                                ${
-                                    Number.isFinite(
-                                        accuracy
-                                    )
-                                    ? Math.round(
-                                        accuracy
-                                    ) + " मीटर"
-                                    : location.accuracy
-                                }
-
-                            </span>
-
-                        </div>
-
-
-                        <div class="row">
-
-                            <div class="label">
-                                🕐 Time:
-                            </div>
-
-                            ${
-                                formatTime(
-                                    location.created_at
-                                )
-                            }
-
-                        </div>
-
-
-                        ${
-                            mapLink(
-                                location.latitude,
-                                location.longitude
-                            )
-                        }
-
-                    </div>
-
-                    `
-                );
-
-            }
-        );
-
-
-        /* ==================================================
-           SUCCESS
-        ================================================== */
-
-        statusBox.innerHTML =
-            "🟢 Location Connected • " +
-            data.length +
-            " records found";
-
-
-        lastRefresh.innerHTML =
-            "Last refresh: " +
-            formatTime(
-                new Date().toISOString()
-            );
-
-
+    } finally {
+        loading = false;
     }
-    catch (error) {
-
-        console.error(
-            "LOCATION ERROR:",
-            error
-        );
-
-
-        statusBox.innerHTML =
-            "🔴 Location data load failed";
-
-
-        errorBox.innerHTML = `
-
-            <div class="error">
-
-                ❌ ${error.message}
-
-            </div>
-
-        `;
-
-    }
-
 }
 
 
-/* ==================================================
-   FIRST LOAD
-================================================== */
+/* FIRST LOAD AND AUTO REFRESH */
 
 loadLocations();
-
-
-/* ==================================================
-   AUTO REFRESH EVERY 5 SECONDS
-================================================== */
-
-setInterval(
-    loadLocations,
-    5000
-);
+setInterval(loadLocations, 5000);
 
 </script>
-
 </body>
 </html>
-
