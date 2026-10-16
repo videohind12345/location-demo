@@ -68,8 +68,8 @@ button {
 
 .start:disabled {
     cursor: default;
-    opacity: 1;
     animation: none;
+    opacity: 0.8;
 }
 
 @keyframes greenBlink {
@@ -84,7 +84,6 @@ button {
     border-radius: 12px;
     text-align: left;
     line-height: 1.8;
-    white-space: pre-line;
     overflow-wrap: anywhere;
 }
 </style>
@@ -124,7 +123,7 @@ button {
     </button>
 
     <div id="status">
-        📡 मैडम की लोकेशन शेयर करना अभी शुरू नहीं हुआ है।
+        📡 लोकेशन शेयर करना अभी शुरू नहीं हुआ है।
     </div>
 
 </div>
@@ -135,58 +134,51 @@ button {
 /* SUPABASE */
 
 const SUPABASE_URL =
-"https://qtfnupdojsqpuywhoryu.supabase.co";
+    "https://qtfnupdojsqpuywhoryu.supabase.co";
 
 const SUPABASE_KEY =
-"sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+    "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 
 /* DEVICE ID */
 
 function getDeviceId() {
-    try {
-        let id = localStorage.getItem("device_id");
+    let id = localStorage.getItem("device_id");
 
-        if (!id) {
-            if (crypto.randomUUID) {
-                id = crypto.randomUUID();
-            } else {
-                id = "device-" +
-                    Date.now() + "-" +
-                    Math.random().toString(36).slice(2);
-            }
+    if (!id) {
+        id = crypto.randomUUID
+            ? crypto.randomUUID()
+            : "device-" + Date.now() + "-" +
+              Math.random().toString(36).slice(2);
 
-            localStorage.setItem("device_id", id);
-        }
-
-        return id;
-    } catch (error) {
-        return "device-" +
-            Date.now() + "-" +
-            Math.random().toString(36).slice(2);
+        localStorage.setItem("device_id", id);
     }
+
+    return id;
 }
 
 const deviceId = getDeviceId();
 
 
-/* TRACKING VARIABLES */
+/* SESSION VARIABLES */
 
 let watchId = null;
 let autoStopTimeout = null;
 let sessionActive = false;
 let sessionNumber = 0;
 let sessionPhoneNumber = null;
-
-/* Reverse geocoding is done once per tracking session. */
-let sessionLocationDetails = {
+let latestLocation = null;
+let savingLocation = false;
+let pendingLocation = null;
+let lastSavedTime = 0;
+let locationDetails = {
     city: "",
     district: "",
     state: ""
 };
 
 
-/* STATUS MESSAGE */
+/* STATUS */
 
 function showStatus(message) {
     document.getElementById("status").textContent = message;
@@ -196,32 +188,27 @@ function showStatus(message) {
 /* PHONE NUMBER IS OPTIONAL */
 
 function getPhoneNumber() {
-    const input = document.getElementById("phoneInput");
-    const digits = input.value.trim().replace(/\D/g, "");
+    const value = document.getElementById("phoneInput").value.trim();
 
-    if (digits === "") {
+    if (!value) {
         return { valid: true, number: null };
     }
 
+    const digits = value.replace(/\D/g, "");
+
     if (/^[6-9]\d{9}$/.test(digits)) {
-        return {
-            valid: true,
-            number: "+91" + digits
-        };
+        return { valid: true, number: "+91" + digits };
     }
 
     if (/^91[6-9]\d{9}$/.test(digits)) {
-        return {
-            valid: true,
-            number: "+" + digits
-        };
+        return { valid: true, number: "+" + digits };
     }
 
     return { valid: false, number: null };
 }
 
 
-/* GET CITY, DISTRICT AND STATE */
+/* GET CITY, DISTRICT AND STATE FROM COORDINATES */
 
 async function getLocationDetails(latitude, longitude) {
     const result = {
@@ -232,41 +219,80 @@ async function getLocationDetails(latitude, longitude) {
 
     try {
         const url =
-            "https://nominatim.openstreetmap.org/reverse" +
-            "?format=jsonv2" +
-            "&addressdetails=1" +
-            "&accept-language=en" +
-            "&lat=" + encodeURIComponent(latitude) +
-            "&lon=" + encodeURIComponent(longitude);
+            "https://api.bigdatacloud.net/data/reverse-geocode-client" +
+            "?latitude=" + encodeURIComponent(latitude) +
+            "&longitude=" + encodeURIComponent(longitude) +
+            "&localityLanguage=en";
 
         const response = await fetch(url);
 
         if (!response.ok) {
-            throw new Error("Reverse geocoding request failed");
+            throw new Error("Location lookup failed");
         }
 
         const data = await response.json();
-        const address = data.address || {};
 
         result.city =
-            address.city ||
-            address.town ||
-            address.village ||
-            address.municipality ||
-            address.city_district ||
-            address.suburb ||
+            data.city ||
+            data.locality ||
             "";
 
         result.district =
-            address.state_district ||
-            address.district ||
-            address.county ||
+            data.localityInfo?.administrative?.find(item =>
+                /district/i.test(item.description || item.name || "")
+            )?.name ||
+            data.localityInfo?.administrative?.find(item =>
+                /county/i.test(item.description || item.name || "")
+            )?.name ||
             "";
 
-        result.state = address.state || "";
+        result.state = data.principalSubdivision || "";
+
+        /*
+         * Some responses do not identify the district clearly.
+         * Try OpenStreetMap as a fallback.
+         */
+        if (!result.district) {
+            try {
+                const fallbackURL =
+                    "https://nominatim.openstreetmap.org/reverse" +
+                    "?format=jsonv2&addressdetails=1&accept-language=en" +
+                    "&lat=" + encodeURIComponent(latitude) +
+                    "&lon=" + encodeURIComponent(longitude);
+
+                const fallbackResponse = await fetch(fallbackURL);
+
+                if (fallbackResponse.ok) {
+                    const fallbackData = await fallbackResponse.json();
+                    const address = fallbackData.address || {};
+
+                    result.district =
+                        address.state_district ||
+                        address.district ||
+                        address.county ||
+                        "";
+
+                    if (!result.city) {
+                        result.city =
+                            address.city ||
+                            address.town ||
+                            address.village ||
+                            address.municipality ||
+                            address.suburb ||
+                            "";
+                    }
+
+                    if (!result.state) {
+                        result.state = address.state || "";
+                    }
+                }
+            } catch (fallbackError) {
+                console.warn("Fallback lookup failed:", fallbackError);
+            }
+        }
 
     } catch (error) {
-        console.warn("Location details unavailable:", error);
+        console.warn("Reverse geocoding failed:", error);
     }
 
     return result;
@@ -280,30 +306,26 @@ function startTracking() {
 
     const button = document.getElementById("startButton");
     const phoneInput = document.getElementById("phoneInput");
-    const phoneResult = getPhoneNumber();
+    const phone = getPhoneNumber();
 
-    if (!phoneResult.valid) {
-        showStatus(
-            "❌ कृपया सही भारतीय मोबाइल नंबर डालें, " +
-            "या बॉक्स खाली छोड़ दें।"
-        );
-
+    if (!phone.valid) {
+        showStatus("❌ सही भारतीय मोबाइल नंबर डालें या बॉक्स खाली छोड़ दें।");
         phoneInput.focus();
         return;
     }
 
     if (!navigator.geolocation) {
-        showStatus("❌ इस ब्राउज़र में GPS सपोर्ट उपलब्ध नहीं है।");
+        showStatus("❌ इस ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है।");
         return;
     }
 
-    sessionPhoneNumber = phoneResult.number;
-
+    sessionPhoneNumber = phone.number;
     button.disabled = true;
     phoneInput.disabled = true;
 
     showStatus(
-        "📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है..."
+        "📡 GPS की अनुमति और लोकेशन की प्रतीक्षा है...\n\n" +
+        "कृपया अपने डिवाइस में Location चालू रखें।"
     );
 
     navigator.geolocation.getCurrentPosition(
@@ -311,69 +333,55 @@ function startTracking() {
             if (sessionActive) return;
 
             sessionActive = true;
-            const thisSession = ++sessionNumber;
+            const currentSession = ++sessionNumber;
 
             button.style.animation = "none";
 
+            latestLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+
             showStatus(
                 "📍 लोकेशन सर्चिंग शुरू हो गई है।\n\n" +
-                "कृपया प्रतीक्षा करें। ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
+                "ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
             );
 
-            /*
-             * Start the 3-minute timer immediately after
-             * the first successful GPS position.
-             */
             autoStopTimeout = setTimeout(() => {
-                stopTracking(thisSession);
-            }, 3 * 60 * 1000);
+                stopTracking(currentSession);
+            }, 180000);
 
             /*
-             * Obtain city, district and state once per session.
-             * GPS coordinates continue to update separately.
+             * Watch GPS immediately, while location details
+             * are being looked up.
              */
-            sessionLocationDetails = await getLocationDetails(
-                position.coords.latitude,
-                position.coords.longitude
-            );
-
-            if (
-                !sessionActive ||
-                thisSession !== sessionNumber
-            ) return;
-
-            saveLocation(
-                position.coords.latitude,
-                position.coords.longitude,
-                position.coords.accuracy,
-                thisSession
-            );
-
             watchId = navigator.geolocation.watchPosition(
                 currentPosition => {
                     if (
                         !sessionActive ||
-                        thisSession !== sessionNumber
+                        currentSession !== sessionNumber
                     ) return;
 
-                    saveLocation(
-                        currentPosition.coords.latitude,
-                        currentPosition.coords.longitude,
-                        currentPosition.coords.accuracy,
-                        thisSession
-                    );
+                    latestLocation = {
+                        latitude: currentPosition.coords.latitude,
+                        longitude: currentPosition.coords.longitude,
+                        accuracy: currentPosition.coords.accuracy
+                    };
+
+                    queueSave(currentSession);
                 },
 
                 error => {
                     if (
                         !sessionActive ||
-                        thisSession !== sessionNumber
+                        currentSession !== sessionNumber
                     ) return;
 
                     showStatus(
-                        "⚠️ GPS अपडेट में समस्या आई।\n\n" +
+                        "⚠️ GPS अपडेट में समस्या आई: " +
                         error.message +
-                        "\n\nट्रैकिंग निर्धारित समय पर अपने आप बंद होगी।"
+                        "\n\nट्रैकिंग निर्धारित समय पर बंद होगी।"
                     );
                 },
 
@@ -383,6 +391,18 @@ function startTracking() {
                     timeout: 30000
                 }
             );
+
+            locationDetails = await getLocationDetails(
+                latestLocation.latitude,
+                latestLocation.longitude
+            );
+
+            if (
+                !sessionActive ||
+                currentSession !== sessionNumber
+            ) return;
+
+            queueSave(currentSession);
         },
 
         error => {
@@ -391,9 +411,8 @@ function startTracking() {
             button.style.animation = "greenBlink 1s infinite";
 
             showStatus(
-                "❌ GPS लोकेशन प्राप्त नहीं हो सकी।\n\n" +
-                "कृपया फोन की Location चालू करें और ब्राउज़र को अनुमति दें।\n\n" +
-                "फिर हरे बटन को दोबारा दबाएँ।\n\n" +
+                "❌ लोकेशन नहीं मिल सकी।\n\n" +
+                "फोन/डिवाइस की Location चालू करें और ब्राउज़र को अनुमति दें।\n\n" +
                 "समस्या: " + error.message
             );
         },
@@ -407,90 +426,137 @@ function startTracking() {
 }
 
 
-/* SAVE LOCATION TO SUPABASE */
+/* SAVE THE LATEST GPS POSITION */
 
-async function saveLocation(
-    latitude,
-    longitude,
-    accuracy,
-    thisSession
-) {
+function queueSave(currentSession) {
     if (
         !sessionActive ||
-        thisSession !== sessionNumber
+        currentSession !== sessionNumber ||
+        !latestLocation
     ) return;
 
+    pendingLocation = {
+        ...latestLocation,
+        session: currentSession
+    };
+
+    processSaveQueue();
+}
+
+
+async function processSaveQueue() {
+    if (savingLocation || !pendingLocation) return;
+
+    savingLocation = true;
+
     try {
-        const response = await fetch(
-            SUPABASE_URL + "/rest/v1/locations",
-            {
-                method: "POST",
+        while (pendingLocation) {
+            const item = pendingLocation;
+            pendingLocation = null;
 
-                headers: {
-                    "apikey": SUPABASE_KEY,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Prefer": "return=minimal"
-                },
+            if (
+                !sessionActive ||
+                item.session !== sessionNumber
+            ) continue;
 
-                body: JSON.stringify({
-                    device_id: deviceId,
-                    phone_number: sessionPhoneNumber,
-                    latitude: latitude,
-                    longitude: longitude,
-                    accuracy: accuracy,
-                    city: sessionLocationDetails.city || null,
-                    district: sessionLocationDetails.district || null,
-                    state: sessionLocationDetails.state || null
-                })
+            /*
+             * Avoid creating excessive records from very frequent
+             * GPS callbacks. Save at most once every 5 seconds.
+             */
+            const now = Date.now();
+
+            if (lastSavedTime && now - lastSavedTime < 5000) {
+                pendingLocation = item;
+
+                await new Promise(resolve =>
+                    setTimeout(resolve, 5000 - (now - lastSavedTime))
+                );
+
+                if (
+                    !sessionActive ||
+                    item.session !== sessionNumber
+                ) {
+                    pendingLocation = null;
+                    continue;
+                }
+
+                if (pendingLocation === item) {
+                    pendingLocation = null;
+                }
             }
-        );
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Supabase save failed");
-        }
-
-        if (
-            !sessionActive ||
-            thisSession !== sessionNumber
-        ) return;
-
-        showStatus(
-            "📍 लोकेशन सर्चिंग जारी है।\n\n" +
-            "📱 मोबाइल नंबर: " +
-            (sessionPhoneNumber || "नंबर नहीं दिया गया") +
-            "\n\n" +
-            "✅ लोकेशन सर्वर पर सेव हो गई।\n" +
-            "🎯 Accuracy: " + Number(accuracy).toFixed(1) + " m\n" +
-            "🏙️ City: " + (sessionLocationDetails.city || "-") + "\n" +
-            "🗺️ State: " + (sessionLocationDetails.state || "-") +
-            "\n\n" +
-            "⏳ ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
-        );
-
-    } catch (error) {
-        console.error("Supabase Error:", error);
-
-        if (
-            sessionActive &&
-            thisSession === sessionNumber
-        ) {
-            showStatus(
-                "⚠️ लोकेशन सर्वर पर सेव नहीं हो पाई।\n\n" +
-                "कृपया इंटरनेट, Supabase की सेटिंग और डेटाबेस कॉलम जाँचें।"
+            const response = await fetch(
+                SUPABASE_URL + "/rest/v1/locations",
+                {
+                    method: "POST",
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
+                    },
+                    body: JSON.stringify({
+                        device_id: deviceId,
+                        phone_number: sessionPhoneNumber,
+                        latitude: item.latitude,
+                        longitude: item.longitude,
+                        accuracy: item.accuracy,
+                        city: locationDetails.city || null,
+                        district: locationDetails.district || null,
+                        state: locationDetails.state || null
+                    })
+                }
             );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText);
+            }
+
+            lastSavedTime = Date.now();
+
+            if (
+                sessionActive &&
+                item.session === sessionNumber
+            ) {
+                showStatus(
+                    "📍 लोकेशन सर्चिंग जारी है।\n\n" +
+                    "📱 मोबाइल नंबर: " +
+                    (sessionPhoneNumber || "नंबर नहीं दिया गया") +
+                    "\n\n" +
+                    "✅ लोकेशन सर्वर पर सेव हो गई।\n" +
+                    "🎯 Accuracy: " +
+                    Number(item.accuracy).toFixed(1) + " m\n" +
+                    "🏙️ City: " + (locationDetails.city || "-") +
+                    "\n🗺️ State: " + (locationDetails.state || "-") +
+                    "\n\n⏳ ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
+                );
+            }
+        }
+    } catch (error) {
+        console.error("Supabase save error:", error);
+
+        if (sessionActive) {
+            showStatus(
+                "⚠️ लोकेशन सर्वर पर सेव नहीं हो सकी।\n\n" +
+                "इंटरनेट, Supabase की सेटिंग और टेबल के कॉलम जाँचें।"
+            );
+        }
+    } finally {
+        savingLocation = false;
+
+        if (pendingLocation && sessionActive) {
+            processSaveQueue();
         }
     }
 }
 
 
-/* AUTOMATIC STOP AFTER 3 MINUTES */
+/* STOP AFTER 3 MINUTES */
 
-function stopTracking(thisSession) {
+function stopTracking(currentSession) {
     if (
         !sessionActive ||
-        thisSession !== sessionNumber
+        currentSession !== sessionNumber
     ) return;
 
     sessionActive = false;
@@ -505,10 +571,12 @@ function stopTracking(thisSession) {
         autoStopTimeout = null;
     }
 
+    pendingLocation = null;
+
     showStatus(
         "✅ 3 मिनट पूरे हो गए हैं।\n\n" +
         "लोकेशन सर्चिंग अपने आप बंद हो गई है।\n\n" +
-        "पहले से सेव लोकेशन रिकॉर्ड सुरक्षित हैं।"
+        "पहले से सेव रिकॉर्ड सुरक्षित हैं।"
     );
 
     const button = document.getElementById("startButton");
@@ -519,11 +587,13 @@ function stopTracking(thisSession) {
     button.style.animation = "greenBlink 1s infinite";
 
     sessionPhoneNumber = null;
-    sessionLocationDetails = {
+    latestLocation = null;
+    locationDetails = {
         city: "",
         district: "",
         state: ""
     };
+    lastSavedTime = 0;
 }
 </script>
 </body>
