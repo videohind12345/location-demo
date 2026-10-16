@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -223,14 +222,10 @@ function phoneHTML(phone) {
     const number = String(phone ?? "").trim();
 
     if (!number) {
-        return `
-            <span>उपलब्ध नहीं</span>
-        `;
+        return `<span>उपलब्ध नहीं</span>`;
     }
 
-    return `
-        <span class="phone">${escapeHTML(number)}</span>
-    `;
+    return `<span class="phone">${escapeHTML(number)}</span>`;
 }
 
 
@@ -263,7 +258,7 @@ function mapLink(latitude, longitude) {
 }
 
 
-/* LOCATION DETAILS */
+/* LOCATION DETAILS: CITY, DISTRICT, STATE */
 
 function locationDetails(location, includeDevice) {
     const accuracy = Number(location.accuracy);
@@ -283,6 +278,11 @@ function locationDetails(location, includeDevice) {
         <div class="row">
             <div class="label">🏙️ City:</div>
             ${escapeHTML(location.city || "उपलब्ध नहीं")}
+        </div>
+
+        <div class="row">
+            <div class="label">🏘️ District:</div>
+            ${escapeHTML(location.district || "उपलब्ध नहीं")}
         </div>
 
         <div class="row">
@@ -335,7 +335,7 @@ async function loadLocations() {
         const url =
             SUPABASE_URL +
             "/rest/v1/locations" +
-            "?select=id,device_id,phone_number,latitude,longitude,accuracy,city,state,created_at" +
+            "?select=id,device_id,phone_number,latitude,longitude,accuracy,city,district,state,created_at" +
             "&order=created_at.desc" +
             "&limit=100";
 
