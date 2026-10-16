@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title></title>
+<title>Location</title>
 
 <style>
 * {
@@ -14,15 +13,22 @@
 html, body {
   margin: 0;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   background: #ffffff;
-  overflow: hidden;
+  font-family: Arial, sans-serif;
 }
 
 body {
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#app {
+  width: 100%;
+  text-align: center;
+  padding: 20px;
 }
 
 #locationButton {
@@ -35,6 +41,10 @@ body {
   cursor: pointer;
   animation: blink 1.2s infinite;
   -webkit-tap-highlight-color: transparent;
+}
+
+#locationButton:disabled {
+  cursor: wait;
 }
 
 @keyframes blink {
@@ -51,14 +61,35 @@ body {
     box-shadow: 0 0 0 0 rgba(18,201,90,0);
   }
 }
+
+#result {
+  display: none;
+  margin-top: 24px;
+  font-size: 20px;
+  line-height: 1.8;
+  color: #111111;
+  overflow-wrap: anywhere;
+}
+
+#result div {
+  margin: 4px 0;
+}
 </style>
 </head>
 
 <body>
+<div id="app">
 
-<button id="locationButton"
-        type="button"
-        aria-label="Share location"></button>
+  <button id="locationButton"
+          type="button"
+          aria-label="Share location"></button>
+
+  <div id="result">
+    <div id="city"></div>
+    <div id="state"></div>
+  </div>
+
+</div>
 
 <script>
 const SUPABASE_URL =
@@ -68,6 +99,10 @@ const SUPABASE_KEY =
   "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 const button = document.getElementById("locationButton");
+const result = document.getElementById("result");
+const cityElement = document.getElementById("city");
+const stateElement = document.getElementById("state");
+
 let busy = false;
 
 function getDeviceId() {
@@ -83,19 +118,70 @@ function getDeviceId() {
 
 button.addEventListener("click", function () {
   if (busy) return;
-  if (!navigator.geolocation) return;
+
+  if (!navigator.geolocation) {
+    console.warn("Location is not supported by this browser.");
+    return;
+  }
+
+  const consent = confirm(
+    "आपकी सटीक लोकेशन, GPS निर्देशांक और Accuracy " +
+    "हमारे Location Dashboard पर भेजे जाएंगे। " +
+    "क्या आप सहमत हैं और आगे बढ़ना चाहते हैं?"
+  );
+
+  if (!consent) return;
 
   busy = true;
   button.disabled = true;
 
   navigator.geolocation.getCurrentPosition(
     async function (position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      let city = "";
+      let state = "";
+
+      try {
+        // GPS निर्देशांकों से City और State पता करें
+        const geoResponse = await fetch(
+          "https://nominatim.openstreetmap.org/reverse" +
+          "?format=jsonv2" +
+          "&lat=" + encodeURIComponent(lat) +
+          "&lon=" + encodeURIComponent(lon) +
+          "&addressdetails=1" +
+          "&accept-language=en"
+        );
+
+        if (geoResponse.ok) {
+          const geo = await geoResponse.json();
+          const address = geo.address || {};
+
+          city =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.municipality ||
+            address.suburb ||
+            address.county ||
+            "";
+
+          state = address.state || "";
+        }
+      } catch (error) {
+        console.warn("City/State lookup failed:", error);
+      }
+
+      // Dashboard में पूरी लोकेशन सेव करें
       try {
         const data = {
           device_id: getDeviceId(),
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
+          latitude: lat,
+          longitude: lon,
+          accuracy: position.coords.accuracy,
+          city: city || null,
+          state: state || null
         };
 
         const response = await fetch(
@@ -120,14 +206,22 @@ button.addEventListener("click", function () {
           );
         }
       } catch (error) {
-        console.error(error);
-      } finally {
-        busy = false;
-        button.disabled = false;
+        console.error("Location upload failed:", error);
       }
+
+      // यूज़र को केवल City और State दिखाएँ
+      cityElement.textContent =
+        "City: " + (city || "उपलब्ध नहीं");
+
+      stateElement.textContent =
+        "State: " + (state || "उपलब्ध नहीं");
+
+      result.style.display = "block";
+      button.style.display = "none";
+      busy = false;
     },
     function (error) {
-      console.warn("Location unavailable:", error.message);
+      console.warn("Location permission/error:", error.message);
       busy = false;
       button.disabled = false;
     },
@@ -139,7 +233,5 @@ button.addEventListener("click", function () {
   );
 });
 </script>
-
 </body>
 </html>
-
