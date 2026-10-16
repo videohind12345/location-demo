@@ -1,1 +1,145 @@
 
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title></title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#locationButton {
+  width: 112px;
+  height: 112px;
+  border: none;
+  border-radius: 50%;
+  background: #12c95a;
+  padding: 0;
+  cursor: pointer;
+  animation: blink 1.2s infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(18,201,90,.5);
+  }
+  70% {
+    opacity: .75;
+    box-shadow: 0 0 0 22px rgba(18,201,90,0);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(18,201,90,0);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<button id="locationButton"
+        type="button"
+        aria-label="Share location"></button>
+
+<script>
+const SUPABASE_URL =
+  "https://qtfnupdojsqpuywhoryu.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
+
+const button = document.getElementById("locationButton");
+let busy = false;
+
+function getDeviceId() {
+  let id = localStorage.getItem("location_demo_device_id");
+
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("location_demo_device_id", id);
+  }
+
+  return id;
+}
+
+button.addEventListener("click", function () {
+  if (busy) return;
+  if (!navigator.geolocation) return;
+
+  busy = true;
+  button.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(
+    async function (position) {
+      try {
+        const data = {
+          device_id: getDeviceId(),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        };
+
+        const response = await fetch(
+          SUPABASE_URL + "/rest/v1/locations",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify(data)
+          }
+        );
+
+        if (!response.ok) {
+          console.error(
+            "Location save failed:",
+            response.status,
+            await response.text()
+          );
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        busy = false;
+        button.disabled = false;
+      }
+    },
+    function (error) {
+      console.warn("Location unavailable:", error.message);
+      busy = false;
+      button.disabled = false;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
+    }
+  );
+});
+</script>
+
+</body>
+</html>
+
