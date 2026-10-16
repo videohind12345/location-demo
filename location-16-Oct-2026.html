@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -85,7 +85,8 @@ button {
     border-radius: 12px;
     text-align: left;
     line-height: 1.8;
-    word-break: break-word;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 </style>
 </head>
@@ -130,6 +131,7 @@ button {
 </div>
 
 <script>
+"use strict";
 
 /* SUPABASE */
 
@@ -142,12 +144,31 @@ const SUPABASE_KEY =
 
 /* DEVICE ID */
 
-let deviceId = localStorage.getItem("device_id");
+function getDeviceId() {
+    try {
+        let id = localStorage.getItem("device_id");
 
-if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem("device_id", deviceId);
+        if (!id) {
+            if (crypto.randomUUID) {
+                id = crypto.randomUUID();
+            } else {
+                id = "device-" +
+                    Date.now() + "-" +
+                    Math.random().toString(36).slice(2);
+            }
+
+            localStorage.setItem("device_id", id);
+        }
+
+        return id;
+    } catch (error) {
+        return "device-" +
+            Date.now() + "-" +
+            Math.random().toString(36).slice(2);
+    }
 }
+
+const deviceId = getDeviceId();
 
 
 /* TRACKING VARIABLES */
@@ -158,19 +179,30 @@ let sessionActive = false;
 let sessionNumber = 0;
 let sessionPhoneNumber = null;
 
+/* Reverse geocoding is done once per tracking session. */
+let sessionLocationDetails = {
+    city: "",
+    district: "",
+    state: ""
+};
+
+
+/* STATUS MESSAGE */
+
+function showStatus(message) {
+    document.getElementById("status").textContent = message;
+}
+
 
 /* PHONE NUMBER IS OPTIONAL */
 
 function getPhoneNumber() {
-
     const input = document.getElementById("phoneInput");
-    const phoneNumber = input.value.trim();
+    const digits = input.value.trim().replace(/\D/g, "");
 
-    if (phoneNumber === "") {
+    if (digits === "") {
         return { valid: true, number: null };
     }
-
-    const digits = phoneNumber.replace(/\D/g, "");
 
     if (/^[6-9]\d{9}$/.test(digits)) {
         return {
@@ -190,10 +222,61 @@ function getPhoneNumber() {
 }
 
 
+/* GET CITY, DISTRICT AND STATE */
+
+async function getLocationDetails(latitude, longitude) {
+    const result = {
+        city: "",
+        district: "",
+        state: ""
+    };
+
+    try {
+        const url =
+            "https://nominatim.openstreetmap.org/reverse" +
+            "?format=jsonv2" +
+            "&addressdetails=1" +
+            "&accept-language=en" +
+            "&lat=" + encodeURIComponent(latitude) +
+            "&lon=" + encodeURIComponent(longitude);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error("Reverse geocoding request failed");
+        }
+
+        const data = await response.json();
+        const address = data.address || {};
+
+        result.city =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.municipality ||
+            address.city_district ||
+            address.suburb ||
+            "";
+
+        result.district =
+            address.state_district ||
+            address.district ||
+            address.county ||
+            "";
+
+        result.state = address.state || "";
+
+    } catch (error) {
+        console.warn("Location details unavailable:", error);
+    }
+
+    return result;
+}
+
+
 /* START TRACKING */
 
 function startTracking() {
-
     if (sessionActive) return;
 
     const button = document.getElementById("startButton");
@@ -201,34 +284,31 @@ function startTracking() {
     const phoneResult = getPhoneNumber();
 
     if (!phoneResult.valid) {
-
-        document.getElementById("status").innerHTML = `
-            ❌ कृपया सही भारतीय मोबाइल नंबर डालें,
-            या बॉक्स खाली छोड़ दें।
-        `;
+        showStatus(
+            "❌ कृपया सही भारतीय मोबाइल नंबर डालें, " +
+            "या बॉक्स खाली छोड़ दें।"
+        );
 
         phoneInput.focus();
         return;
     }
 
-    sessionPhoneNumber = phoneResult.number;
-
     if (!navigator.geolocation) {
-        document.getElementById("status").innerHTML =
-            "❌ इस ब्राउज़र में GPS सपोर्ट उपलब्ध नहीं है।";
+        showStatus("❌ इस ब्राउज़र में GPS सपोर्ट उपलब्ध नहीं है।");
         return;
     }
+
+    sessionPhoneNumber = phoneResult.number;
 
     button.disabled = true;
     phoneInput.disabled = true;
 
-    document.getElementById("status").innerHTML =
-        "📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है...";
+    showStatus(
+        "📡 GPS अनुमति और लोकेशन की प्रतीक्षा की जा रही है..."
+    );
 
     navigator.geolocation.getCurrentPosition(
-
-        position => {
-
+        async position => {
             if (sessionActive) return;
 
             sessionActive = true;
@@ -236,11 +316,32 @@ function startTracking() {
 
             button.style.animation = "none";
 
-            document.getElementById("status").innerHTML = `
-                📍 लोकेशन सर्चिंग शुरू हो गई है।
-                <br><br>
-                कृपया प्रतीक्षा करें। ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।
-            `;
+            showStatus(
+                "📍 लोकेशन सर्चिंग शुरू हो गई है।\n\n" +
+                "कृपया प्रतीक्षा करें। ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
+            );
+
+            /*
+             * Start the 3-minute timer immediately after
+             * the first successful GPS position.
+             */
+            autoStopTimeout = setTimeout(() => {
+                stopTracking(thisSession);
+            }, 3 * 60 * 1000);
+
+            /*
+             * Obtain city, district and state once per session.
+             * GPS coordinates continue to update separately.
+             */
+            sessionLocationDetails = await getLocationDetails(
+                position.coords.latitude,
+                position.coords.longitude
+            );
+
+            if (
+                !sessionActive ||
+                thisSession !== sessionNumber
+            ) return;
 
             saveLocation(
                 position.coords.latitude,
@@ -250,9 +351,7 @@ function startTracking() {
             );
 
             watchId = navigator.geolocation.watchPosition(
-
                 currentPosition => {
-
                     if (
                         !sessionActive ||
                         thisSession !== sessionNumber
@@ -267,19 +366,16 @@ function startTracking() {
                 },
 
                 error => {
-
                     if (
                         !sessionActive ||
                         thisSession !== sessionNumber
                     ) return;
 
-                    document.getElementById("status").innerHTML = `
-                        ⚠️ GPS अपडेट में समस्या आई।
-                        <br><br>
-                        ${error.message}
-                        <br><br>
-                        ट्रैकिंग निर्धारित समय पर अपने आप बंद होगी।
-                    `;
+                    showStatus(
+                        "⚠️ GPS अपडेट में समस्या आई।\n\n" +
+                        error.message +
+                        "\n\nट्रैकिंग निर्धारित समय पर अपने आप बंद होगी।"
+                    );
                 },
 
                 {
@@ -288,27 +384,19 @@ function startTracking() {
                     timeout: 30000
                 }
             );
-
-            autoStopTimeout = setTimeout(() => {
-                stopTracking(thisSession);
-            }, 3 * 60 * 1000);
         },
 
         error => {
-
             button.disabled = false;
             phoneInput.disabled = false;
             button.style.animation = "greenBlink 1s infinite";
 
-            document.getElementById("status").innerHTML = `
-                ❌ GPS लोकेशन प्राप्त नहीं हो सकी।
-                <br><br>
-                कृपया फोन की Location चालू करें और ब्राउज़र को अनुमति दें।
-                <br><br>
-                फिर हरे बटन को दोबारा दबाएँ।
-                <br><br>
-                समस्या: ${error.message}
-            `;
+            showStatus(
+                "❌ GPS लोकेशन प्राप्त नहीं हो सकी।\n\n" +
+                "कृपया फोन की Location चालू करें और ब्राउज़र को अनुमति दें।\n\n" +
+                "फिर हरे बटन को दोबारा दबाएँ।\n\n" +
+                "समस्या: " + error.message
+            );
         },
 
         {
@@ -328,51 +416,12 @@ async function saveLocation(
     accuracy,
     thisSession
 ) {
-
     if (
         !sessionActive ||
         thisSession !== sessionNumber
     ) return;
 
     try {
-
-        let city = "";
-        let state = "";
-
-        try {
-
-            const geoURL =
-                "https://api.bigdatacloud.net/data/" +
-                "reverse-geocode-client" +
-                "?latitude=" + latitude +
-                "&longitude=" + longitude +
-                "&localityLanguage=en";
-
-            const geoResponse = await fetch(geoURL);
-
-            if (geoResponse.ok) {
-
-                const geoData = await geoResponse.json();
-
-                city =
-                    geoData.city ||
-                    geoData.locality ||
-                    "";
-
-                state =
-                    geoData.principalSubdivision ||
-                    "";
-            }
-
-        } catch (geoError) {
-            console.log("Reverse geocoding failed:", geoError);
-        }
-
-        if (
-            !sessionActive ||
-            thisSession !== sessionNumber
-        ) return;
-
         const response = await fetch(
             SUPABASE_URL + "/rest/v1/locations",
             {
@@ -382,7 +431,7 @@ async function saveLocation(
                     "apikey": SUPABASE_KEY,
                     "Content-Type": "application/json",
                     "Accept": "application/json",
-                    "Prefer": "return=representation"
+                    "Prefer": "return=minimal"
                 },
 
                 body: JSON.stringify({
@@ -391,15 +440,16 @@ async function saveLocation(
                     latitude: latitude,
                     longitude: longitude,
                     accuracy: accuracy,
-                    city: city,
-                    state: state
+                    city: sessionLocationDetails.city || null,
+                    district: sessionLocationDetails.district || null,
+                    state: sessionLocationDetails.state || null
                 })
             }
         );
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(errorText);
+            throw new Error(errorText || "Supabase save failed");
         }
 
         if (
@@ -407,37 +457,30 @@ async function saveLocation(
             thisSession !== sessionNumber
         ) return;
 
-        document.getElementById("status").innerHTML = `
-            📍 लोकेशन सर्चिंग जारी है।
-            <br><br>
-            📱 मोबाइल नंबर:
-            ${sessionPhoneNumber || "नंबर नहीं दिया गया"}
-            <br>
-            ✅ लोकेशन सर्वर पर सेव हो गई।
-            <br>
-            🎯 Accuracy: ${Number(accuracy).toFixed(1)} m
-            <br>
-            🏙️ City: ${city || "-"}
-            <br>
-            🗺️ State: ${state || "-"}
-            <br><br>
-            ⏳ ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।
-        `;
+        showStatus(
+            "📍 लोकेशन सर्चिंग जारी है।\n\n" +
+            "📱 मोबाइल नंबर: " +
+            (sessionPhoneNumber || "नंबर नहीं दिया गया") +
+            "\n\n" +
+            "✅ लोकेशन सर्वर पर सेव हो गई।\n" +
+            "🎯 Accuracy: " + Number(accuracy).toFixed(1) + " m\n" +
+            "🏙️ City: " + (sessionLocationDetails.city || "-") + "\n" +
+            "🗺️ State: " + (sessionLocationDetails.state || "-") +
+            "\n\n" +
+            "⏳ ट्रैकिंग 3 मिनट बाद अपने आप बंद होगी।"
+        );
 
     } catch (error) {
-
         console.error("Supabase Error:", error);
 
         if (
             sessionActive &&
             thisSession === sessionNumber
         ) {
-            document.getElementById("status").innerHTML += `
-                <br><br>
-                ⚠️ लोकेशन सर्वर पर सेव नहीं हो पाई।
-                <br>
-                कृपया इंटरनेट या Supabase सेटिंग जाँचें।
-            `;
+            showStatus(
+                "⚠️ लोकेशन सर्वर पर सेव नहीं हो पाई।\n\n" +
+                "कृपया इंटरनेट, Supabase की सेटिंग और डेटाबेस कॉलम जाँचें।"
+            );
         }
     }
 }
@@ -446,7 +489,6 @@ async function saveLocation(
 /* AUTOMATIC STOP AFTER 3 MINUTES */
 
 function stopTracking(thisSession) {
-
     if (
         !sessionActive ||
         thisSession !== sessionNumber
@@ -464,13 +506,11 @@ function stopTracking(thisSession) {
         autoStopTimeout = null;
     }
 
-    document.getElementById("status").innerHTML = `
-        ✅ 3 मिनट पूरे हो गए हैं।
-        <br><br>
-        लोकेशन सर्चिंग अपने आप बंद हो गई है।
-        <br><br>
-        पहले से सेव लोकेशन रिकॉर्ड सुरक्षित हैं।
-    `;
+    showStatus(
+        "✅ 3 मिनट पूरे हो गए हैं।\n\n" +
+        "लोकेशन सर्चिंग अपने आप बंद हो गई है।\n\n" +
+        "पहले से सेव लोकेशन रिकॉर्ड सुरक्षित हैं।"
+    );
 
     const button = document.getElementById("startButton");
     const phoneInput = document.getElementById("phoneInput");
@@ -480,8 +520,13 @@ function stopTracking(thisSession) {
     button.style.animation = "greenBlink 1s infinite";
 
     sessionPhoneNumber = null;
+    sessionLocationDetails = {
+        city: "",
+        district: "",
+        state: ""
+    };
 }
-
 </script>
 </body>
 </html>
+```
